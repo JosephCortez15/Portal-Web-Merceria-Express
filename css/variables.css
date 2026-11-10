@@ -1,0 +1,42 @@
+/* Tokens de diseño: paleta Yoshi's Woolly World, tema claro y oscuro */
+:root {
+  --bg: #DDEBF5;          /* fieltro azul hielo (5-1 Blizzard Mountain) */
+  --surface: #FBFAF5;     /* fieltro blanco */
+  --surface-2: #EAF2F9;
+  --ink: #2B2A3A;
+  --muted: #586079;
+  --line: #B5C8DB;
+  --denim: #3F6190;       /* denim de la portada */
+  --btn-bg: #3A8527;      /* verde lana oscuro */
+  --btn-ink: #FFFFFF;
+  --c-green: #6CC24A;
+  --c-pink: #F08BB4;
+  --c-yellow: #F6CF4A;
+  --c-orange: #F29A3B;
+  --c-cyan: #4CC3E3;
+  --wood: #8B5A34;
+  --on-fill: #2B2A3A;
+  --ok: #2F7D1F;
+  --warn: #A85A00;
+  --err: #C2362F;
+  --shadow: 0 2px 0 rgba(43,42,58,.10), 0 10px 24px -12px rgba(43,42,58,.35);
+  --radius: 22px;
+  --font-display: 'Fredoka', 'Trebuchet MS', system-ui, sans-serif;
+  --font-body: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17233B; --surface: #243558; --surface-2: #1D2C49; --ink: #F6F1E4; --muted: #B8C4DC;
+    --line: #405782; --denim: #9CC0F0; --btn-bg: #6CC24A; --btn-ink: #12260B;
+    --ok: #8FDB72; --warn: #F7B25E; --err: #FF8A82;
+    --shadow: 0 2px 0 rgba(0,0,0,.25), 0 10px 24px -12px rgba(0,0,0,.6);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17233B; --surface: #243558; --surface-2: #1D2C49; --ink: #F6F1E4; --muted: #B8C4DC;
+  --line: #405782; --denim: #9CC0F0; --btn-bg: #6CC24A; --btn-ink: #12260B;
+  --ok: #8FDB72; --warn: #F7B25E; --err: #FF8A82;
+  --shadow: 0 2px 0 rgba(0,0,0,.25), 0 10px 24px -12px rgba(0,0,0,.6);
+  color-scheme: dark;
+}
