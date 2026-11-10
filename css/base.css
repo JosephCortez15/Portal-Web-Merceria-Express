@@ -1,0 +1,19 @@
+/* Reset, tipografía base y accesibilidad */
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 5.5rem; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.55;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--surface); }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.1; margin: 0; text-wrap: balance; color: var(--denim); }
+h1 { font-size: clamp(2.3rem, 6vw, 3.8rem); font-weight: 700; }
+h2 { font-size: clamp(1.7rem, 3.5vw, 2.3rem); font-weight: 700; }
+h3 { font-size: 1.15rem; font-weight: 600; color: var(--ink); }
+p { margin: 0; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--denim); outline-offset: 3px; border-radius: 8px; }
+.wrap { width: 100%; max-width: 1160px; margin-inline: auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.skip { position: absolute; left: -999px; top: 8px; background: var(--surface); padding: .5rem 1rem; border-radius: 999px; z-index: 50; }
+.skip:focus { left: 16px; }
