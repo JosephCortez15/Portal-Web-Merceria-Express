@@ -11,7 +11,13 @@ export const ENVIO_GRATIS = 250;
 export const state = { cart: {}, coupon: null, sold: {} };
 
 let onChange = () => {};
+let beforeCheckout = () => true;
 export function setOnChange(fn) { onChange = fn; }
+export function setCheckoutGuard(fn) { beforeCheckout = fn; }
+
+function allowStoreAction() {
+  return beforeCheckout ? beforeCheckout() : true;
+}
 
 export const available = p => r2(p.stock - (state.sold[p.id] || 0));
 export const remaining = p => r2(available(p) - (state.cart[p.id] || 0));
@@ -26,6 +32,7 @@ export function save() {
 export function refresh() { renderCart(); onChange(); }
 
 export function addToCart(id, qty) {
+  if (!allowStoreAction()) return 0;
   const p = byId(id);
   const add = Math.min(qty, remaining(p));
   if (add <= 0) { toast(`No hay más stock de ${p.nombre}.`); return 0; }
@@ -35,6 +42,7 @@ export function addToCart(id, qty) {
 }
 
 export function setQty(id, q) {
+  if (!allowStoreAction()) return;
   const p = byId(id);
   q = r2(q);
   if (q <= 0) delete state.cart[id]; else state.cart[id] = Math.min(q, available(p));
@@ -105,10 +113,12 @@ export function renderCart() {
 const modal = () => $('#cartModal');
 
 export function showView(v) {
+  $('#viewAccount').hidden = v !== 'account';
   $('#viewCart').hidden = v !== 'cart';
   $('#viewPay').hidden = v !== 'pay';
   $('#viewReceipt').hidden = v !== 'receipt';
-  $('#modalTitle').textContent = { cart: 'Tu carrito', pay: 'Pago', receipt: 'Recibo digital' }[v];
+  $('#modalTitle').textContent = { account: 'Mi cuenta', cart: 'Tu carrito', pay: 'Pago', receipt: 'Recibo digital' }[v];
+  $('.steps').hidden = v === 'account';
   $$('.steps li').forEach(li => {
     if (li.dataset.step === v) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current');
   });
@@ -128,7 +138,10 @@ export function initCarrito() {
   const c = store.get('me.coupon', null);
   state.coupon = c && COUPONS[c] ? c : null;
 
-  $('#cartBtn').addEventListener('click', () => openCart('cart'));
+  $('#cartBtn').addEventListener('click', () => {
+    if (!allowStoreAction()) return;
+    openCart('cart');
+  });
   $('#closeModal').addEventListener('click', closeCart);
   modal().addEventListener('click', e => { if (e.target === modal()) closeCart(); });
   $$('[data-close-go]').forEach(b => b.addEventListener('click', () => { closeCart(); location.hash = b.dataset.closeGo.slice(1); }));
@@ -169,6 +182,7 @@ export function initCarrito() {
 
   $('#toCheckout').addEventListener('click', () => {
     if (!Object.keys(state.cart).length) return;
+    if (!allowStoreAction()) return;
     renderCart();
     showView('pay');
   });

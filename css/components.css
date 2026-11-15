@@ -69,7 +69,25 @@
 .hint { font-size: .85rem; color: var(--muted); }
 .note-warn { color: var(--warn); font-weight: 700; font-size: .9rem; }
 .placeholder-result { text-align: center; color: var(--muted); padding: 1.5rem .5rem; }
-
+#viewAccount { display: grid; gap: 1rem; }
+#accountForms { display: grid; gap: 1rem; }
+#loginForm, #registerForm, #accountProfile {
+  background: linear-gradient(135deg, rgba(255,255,255,.88), rgba(243,245,252,.88));
+  border: 1px solid rgba(132,148,190,.2);
+  border-radius: 22px;
+  padding: 1.2rem;
+  box-shadow: 0 12px 32px rgba(76,96,145,.12);
+}
+#loginForm h3, #registerForm h3, #accountProfile h3 { margin-top: 0; }
+#accountProfile { display: grid; gap: .75rem; }
+#accountGreeting { font-family: var(--font-display); font-size: clamp(1.5rem, 2vw, 2rem); margin-bottom: 0; }
+#accountEmail { margin: 0; }
+#salesHistory { margin-block: 1rem; }
+.sales-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .65rem; }
+.sales-list li { display: flex; justify-content: space-between; gap: 1rem; align-items: start; padding: .8rem; border: 2px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.72); }
+.sales-list li > div { display: grid; gap: .2rem; min-width: 0; }
+.sales-list li span { color: var(--muted); font-size: .88rem; overflow-wrap: anywhere; }
+.sales-list li > b { white-space: nowrap; color: var(--denim); }
 /* ---------- Diálogo carrito / checkout / recibo ---------- */
 dialog.cart-modal { width: min(780px, calc(100% - 24px)); max-height: min(92dvh, 900px); padding: 0; border: 0; border-radius: 26px; background: var(--surface); color: var(--ink); box-shadow: 0 24px 60px rgba(0,0,0,.45); overflow: auto; }
 dialog.cart-modal::backdrop { background: rgba(18,28,48,.6); }

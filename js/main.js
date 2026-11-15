@@ -1,14 +1,17 @@
 /* main.js — punto de entrada: importa y arranca los módulos */
 import { $, store, toast } from './utils.js';
 import { art, initCatalog, renderCatalog } from './productos.js';
-import { state, initCarrito, refresh, setOnChange, save } from './carrito.js';
+import { state, initCarrito, refresh, setOnChange, setCheckoutGuard, save } from './carrito.js';
 import { initCalculadora, renderCalcSelects } from './calculadora.js';
 import { initCheckout } from './checkout.js';
+import { initAuth, requireAuth } from './auth.js';
 
 /* Cuando cambia el carrito se refrescan stock del catálogo y opciones de la calculadora */
 setOnChange(() => { renderCatalog(); renderCalcSelects(); });
 
 initCarrito();
+initAuth();
+setCheckoutGuard(requireAuth);
 initCatalog();
 initCalculadora();
 initCheckout();

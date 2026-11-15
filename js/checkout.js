@@ -2,6 +2,7 @@
 import { $, $$, r2, money, toast, validateForm } from './utils.js';
 import { fmtQty } from './productos.js';
 import { state, totals, save, refresh, showView } from './carrito.js';
+import { getCurrentUser, recordSale, requireAuth } from './auth.js';
 
 let lastReceipt = null;
 
@@ -20,9 +21,29 @@ function buildReceipt(data) {
   const dateKey = [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('');
   const num = 'ME-' + dateKey + '-' + String(Math.floor(1000 + Math.random() * 9000));
   return {
-    num, cupon: state.coupon, t, cliente: data, ultimos: data.card.slice(-4),
-    fecha: d.toLocaleString('es-BO', { dateStyle: 'long', timeStyle: 'short' })
+    num, cupon: state.coupon, t,
+    cliente: { nombre: data.nombre, email: data.email, tel: data.tel, dir: data.dir },
+    ultimos: data.card.slice(-4),
+    fecha: d.toLocaleString('es-BO', { dateStyle: 'long', timeStyle: 'short' }),
+    fechaISO: d.toISOString()
   };
+}
+
+function saveSale(receipt) {
+  const { t } = receipt;
+  recordSale({
+    num: receipt.num,
+    fecha: receipt.fecha,
+    fechaISO: receipt.fechaISO,
+    cliente: { nombre: receipt.cliente.nombre, email: receipt.cliente.email },
+    lines: t.lines.map(({ p, q }) => ({ productId: p.id, name: p.nombre, quantity: q, unitPrice: p.precio })),
+    subtotal: t.subtotal,
+    descuento: t.descuento,
+    cupon: receipt.cupon,
+    iva: t.iva,
+    envio: t.envio,
+    total: t.total
+  });
 }
 
 function receiptHTML(r) {
@@ -75,8 +96,10 @@ export function initCheckout() {
 
   form.addEventListener('submit', e => {
     e.preventDefault();
+    if (!getCurrentUser()) { requireAuth(); return; }
     if (!validateForm(form)) return;
     lastReceipt = buildReceipt(Object.fromEntries(new FormData(form)));
+    saveSale(lastReceipt);
     /* Descuenta del stock lo vendido */
     lastReceipt.t.lines.forEach(({ p, q }) => { state.sold[p.id] = r2((state.sold[p.id] || 0) + q); });
     $('#receipt').innerHTML = receiptHTML(lastReceipt);
