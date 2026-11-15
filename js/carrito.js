@@ -11,12 +11,14 @@ export const ENVIO_GRATIS = 250;
 export const state = { cart: {}, coupon: null, sold: {} };
 
 let onChange = () => {};
+let beforeStoreAction = () => true;
 let beforeCheckout = () => true;
 export function setOnChange(fn) { onChange = fn; }
+export function setStoreActionGuard(fn) { beforeStoreAction = fn; }
 export function setCheckoutGuard(fn) { beforeCheckout = fn; }
 
 function allowStoreAction() {
-  return beforeCheckout ? beforeCheckout() : true;
+  return beforeStoreAction ? beforeStoreAction() : true;
 }
 
 export const available = p => r2(p.stock - (state.sold[p.id] || 0));
@@ -182,7 +184,7 @@ export function initCarrito() {
 
   $('#toCheckout').addEventListener('click', () => {
     if (!Object.keys(state.cart).length) return;
-    if (!allowStoreAction()) return;
+    if (!beforeCheckout()) return;
     renderCart();
     showView('pay');
   });

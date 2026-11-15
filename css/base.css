@@ -1,5 +1,6 @@
 /* Reset, tipografía base y accesibilidad */
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { scroll-behavior: smooth; scroll-padding-top: 5.5rem; }
 body {
   margin: 0; background: var(--bg); color: var(--ink);

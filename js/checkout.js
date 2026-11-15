@@ -2,7 +2,7 @@
 import { $, $$, r2, money, toast, validateForm } from './utils.js';
 import { fmtQty } from './productos.js';
 import { state, totals, save, refresh, showView } from './carrito.js';
-import { getCurrentUser, recordSale, requireAuth } from './auth.js';
+import { getCurrentUser, recordSale, requireCheckoutAuth } from './auth.js';
 
 let lastReceipt = null;
 
@@ -96,7 +96,7 @@ export function initCheckout() {
 
   form.addEventListener('submit', e => {
     e.preventDefault();
-    if (!getCurrentUser()) { requireAuth(); return; }
+    if (!getCurrentUser()) { requireCheckoutAuth(); return; }
     if (!validateForm(form)) return;
     lastReceipt = buildReceipt(Object.fromEntries(new FormData(form)));
     saveSale(lastReceipt);

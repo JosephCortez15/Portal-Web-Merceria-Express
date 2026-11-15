@@ -82,6 +82,17 @@ function clearStatus() {
   $('#registerMsg').textContent = '';
 }
 
+function setAuthMode(mode) {
+  const registering = mode === 'register';
+  clearStatus();
+  $('#loginForm').hidden = registering;
+  $('#registerForm').hidden = !registering;
+  $('#authTitle').textContent = registering ? 'Crea tu cuenta' : 'Qué bueno verte';
+  $('#authDescription').textContent = registering
+    ? 'Regístrate y guarda tus compras para volver a tus ideas cuando quieras.'
+    : 'Inicia sesión para guardar tus compras y seguir creando.';
+}
+
 function showAuthError(message, target = '#accountMsg') {
   const status = $(target);
   status.className = 'coupon-msg bad';
@@ -95,9 +106,16 @@ function showUserAccount() {
 
 export function requireAuth() {
   if (getCurrentUser()) return true;
+  openCart('account');
+  toast('Inicia sesión o crea una cuenta para usar el carrito.');
+  return false;
+}
+
+export function requireCheckoutAuth() {
+  if (getCurrentUser()) return true;
   checkoutPending = true;
   openCart('account');
-  toast('Inicia sesión o crea una cuenta para continuar con la compra.');
+  toast('Inicia sesión o crea una cuenta para continuar con el pago.');
   return false;
 }
 
@@ -112,15 +130,11 @@ export function recordSale(sale) {
 export function initAuth() {
   $('#accountBtn').addEventListener('click', () => openCart('account'));
   $('#showRegister').addEventListener('click', () => {
-    clearStatus();
-    $('#loginForm').hidden = true;
-    $('#registerForm').hidden = false;
+    setAuthMode('register');
     $('#registerName').focus();
   });
   $('#showLogin').addEventListener('click', () => {
-    clearStatus();
-    $('#registerForm').hidden = true;
-    $('#loginForm').hidden = false;
+    setAuthMode('login');
     $('#loginEmail').focus();
   });
   $('#confirmPassword').addEventListener('input', () => {
@@ -209,8 +223,7 @@ export function initAuth() {
   $('#logoutBtn').addEventListener('click', () => {
     store.del(SESSION_KEY);
     updateAccountUI();
-    $('#loginForm').hidden = false;
-    $('#registerForm').hidden = true;
+    setAuthMode('login');
     showView('account');
     toast('Sesión cerrada.');
   });

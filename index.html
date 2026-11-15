@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Mercería Express Bazar</title>
   <meta name="description" content="Mercería Express Bazar — artículos de costura, hilos, telas y manualidades.">
-  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="icon" type="image/png" href="assets/images/merceria-express-logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap">
@@ -17,29 +17,7 @@
 <header class="site-header">
   <div class="wrap">
     <a class="brand" href="#inicio" aria-label="Mercería Express Bazar, inicio">
-      <span class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="brandRing" x1="0%" x2="100%" y1="0%" y2="100%">
-              <stop offset="0%" stop-color="#d63d2f"/>
-              <stop offset="16%" stop-color="#f29d3d"/>
-              <stop offset="32%" stop-color="#f3d856"/>
-              <stop offset="48%" stop-color="#72b767"/>
-              <stop offset="64%" stop-color="#46b3c8"/>
-              <stop offset="80%" stop-color="#6d6fe7"/>
-              <stop offset="100%" stop-color="#bb5cf8"/>
-            </linearGradient>
-          </defs>
-          <circle cx="60" cy="60" r="48" fill="#f8f8f8" stroke="#e8e7e2" stroke-width="8"/>
-          <circle cx="60" cy="60" r="40" fill="none" stroke="url(#brandRing)" stroke-width="18" stroke-linecap="round" stroke-dasharray="180 120"/>
-          <circle cx="60" cy="60" r="23" fill="#f8f8f8"/>
-          <path d="M40 42c8-8 18-12 32-12 18 0 30 10 32 25-2-1-3-1-5-1-7 0-13 4-16 10-4 9-3 22 8 28-9 8-20 12-33 12-17 0-30-8-38-22 8 3 15 5 24 5 8 0 16-3 23-7-7-4-11-11-11-20 0-7 3-14 9-19-7-3-13-4-21-4z" fill="#f29d3d" opacity=".8"/>
-          <path d="M45 72a19 19 0 1 1 38 0 19 19 0 0 1-38 0Z" fill="#f8f8f8"/>
-          <path d="M46 72h28M60 58v28" stroke="#f38d46" stroke-width="7" stroke-linecap="round"/>
-          <path d="M58 48c12 0 22 8 22 19 0 9-8 17-18 17h-7c-9 0-16-7-16-16 0-10 8-20 19-20Z" fill="#f8f8f8"/>
-          <path d="M72 42l16-8 3 10-18 6z" fill="#f39f3f"/>
-        </svg>
-      </span>
+      <img class="brand-mark" src="assets/images/merceria-express-logo.jpg" alt="">
       <span class="brand-text">
         <span class="brand-name">Mercería Express</span>
         <span class="brand-tag">BAZAR</span>
@@ -200,57 +178,79 @@
   <div class="modal-body">
 
     <section id="viewAccount" aria-label="Cuenta" hidden>
-      <p class="sim-banner">Cuenta de demostración: los datos y las compras se guardan solo en este navegador.</p>
-      <div id="accountForms">
-        <form id="loginForm" novalidate>
-          <h3>Iniciar sesión</h3>
-          <div class="form-grid">
-            <div class="field full"><label for="loginEmail">Correo electrónico</label>
-              <input id="loginEmail" name="email" type="email" required autocomplete="email" aria-describedby="loginEmail-err">
-              <span class="err" id="loginEmail-err" aria-live="polite"></span></div>
-            <div class="field full"><label for="loginPassword">Contraseña</label>
-              <input id="loginPassword" name="password" type="password" required autocomplete="current-password" aria-describedby="loginPassword-err">
-              <span class="err" id="loginPassword-err" aria-live="polite"></span></div>
+      <div class="auth-layout">
+        <aside class="auth-showcase">
+          <img src="assets/images/merceria-express-logo.jpg" alt="Emblema multicolor de Mercería Express Bazar en una madeja de lana">
+          <div class="auth-showcase__copy">
+            <span class="auth-kicker">Mercería Express Bazar</span>
+            <h2>Un mundo de ideas, hecho con hilo.</h2>
+            <p>Entra a tu cuenta y encuentra todo para tu próximo proyecto.</p>
           </div>
-          <p class="coupon-msg" id="accountMsg" role="status" aria-live="polite"></p>
-          <div class="hero-actions">
-            <button class="btn" type="submit">Iniciar sesión</button>
-            <button class="btn btn--ghost" id="showRegister" type="button">Crear cuenta</button>
-          </div>
-        </form>
+        </aside>
+        <div class="auth-panel">
+          <div id="accountForms">
+            <div class="auth-heading">
+              <span class="auth-eyebrow">Tu espacio creativo</span>
+              <h2 id="authTitle">Qué bueno verte</h2>
+              <p id="authDescription">Inicia sesión para guardar tus compras y seguir creando.</p>
+            </div>
+            <form id="loginForm" class="auth-form" novalidate>
+              <div class="field">
+                <label for="loginEmail">Correo electrónico</label>
+                <input id="loginEmail" name="email" type="email" required autocomplete="email" placeholder="tu@correo.com" aria-describedby="loginEmail-err">
+                <span class="err" id="loginEmail-err" aria-live="polite"></span>
+              </div>
+              <div class="field">
+                <label for="loginPassword">Contraseña</label>
+                <input id="loginPassword" name="password" type="password" required autocomplete="current-password" placeholder="Tu contraseña" aria-describedby="loginPassword-err">
+                <span class="err" id="loginPassword-err" aria-live="polite"></span>
+              </div>
+              <p class="coupon-msg" id="accountMsg" role="status" aria-live="polite"></p>
+              <button class="btn auth-submit" type="submit">Iniciar sesión</button>
+              <p class="auth-switch">¿Aún no tienes cuenta? <button id="showRegister" type="button">Crear cuenta</button></p>
+            </form>
 
-        <form id="registerForm" novalidate hidden>
-          <h3>Crear cuenta</h3>
-          <div class="form-grid">
-            <div class="field full"><label for="registerName">Nombre completo</label>
-              <input id="registerName" name="name" required minlength="3" autocomplete="name" aria-describedby="registerName-err">
-              <span class="err" id="registerName-err" aria-live="polite"></span></div>
-            <div class="field full"><label for="registerEmail">Correo electrónico</label>
-              <input id="registerEmail" name="email" type="email" required autocomplete="email" aria-describedby="registerEmail-err">
-              <span class="err" id="registerEmail-err" aria-live="polite"></span></div>
-            <div class="field"><label for="registerPassword">Contraseña (mínimo 8 caracteres)</label>
-              <input id="registerPassword" name="password" type="password" required minlength="8" autocomplete="new-password" aria-describedby="registerPassword-err">
-              <span class="err" id="registerPassword-err" aria-live="polite"></span></div>
-            <div class="field"><label for="confirmPassword">Confirmar contraseña</label>
-              <input id="confirmPassword" name="confirmPassword" type="password" required autocomplete="new-password" aria-describedby="confirmPassword-err">
-              <span class="err" id="confirmPassword-err" aria-live="polite"></span></div>
+            <form id="registerForm" class="auth-form" novalidate hidden>
+              <div class="field">
+                <label for="registerName">Nombre completo</label>
+                <input id="registerName" name="name" required minlength="3" autocomplete="name" placeholder="Tu nombre" aria-describedby="registerName-err">
+                <span class="err" id="registerName-err" aria-live="polite"></span>
+              </div>
+              <div class="field">
+                <label for="registerEmail">Correo electrónico</label>
+                <input id="registerEmail" name="email" type="email" required autocomplete="email" placeholder="tu@correo.com" aria-describedby="registerEmail-err">
+                <span class="err" id="registerEmail-err" aria-live="polite"></span>
+              </div>
+              <div class="auth-passwords">
+                <div class="field">
+                  <label for="registerPassword">Contraseña</label>
+                  <input id="registerPassword" name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres" aria-describedby="registerPassword-err">
+                  <span class="err" id="registerPassword-err" aria-live="polite"></span>
+                </div>
+                <div class="field">
+                  <label for="confirmPassword">Confirmar contraseña</label>
+                  <input id="confirmPassword" name="confirmPassword" type="password" required autocomplete="new-password" placeholder="Repite tu contraseña" aria-describedby="confirmPassword-err">
+                  <span class="err" id="confirmPassword-err" aria-live="polite"></span>
+                </div>
+              </div>
+              <p class="coupon-msg" id="registerMsg" role="status" aria-live="polite"></p>
+              <button class="btn auth-submit" type="submit">Crear mi cuenta</button>
+              <p class="auth-switch">¿Ya tienes cuenta? <button id="showLogin" type="button">Inicia sesión</button></p>
+            </form>
           </div>
-          <p class="coupon-msg" id="registerMsg" role="status" aria-live="polite"></p>
-          <div class="hero-actions">
-            <button class="btn" type="submit">Crear cuenta</button>
-            <button class="btn btn--ghost" id="showLogin" type="button">Ya tengo cuenta</button>
+          <div id="accountProfile" hidden>
+            <span class="auth-eyebrow">Tu espacio creativo</span>
+            <h2 id="accountGreeting"></h2>
+            <p id="accountEmail" class="hint"></p>
+            <div class="modal-actions">
+              <h3>Mis compras</h3>
+              <button class="link-btn" id="logoutBtn" type="button">Cerrar sesión</button>
+            </div>
+            <div id="salesHistory" class="sales-history" aria-live="polite"></div>
+            <button class="btn" id="accountContinue" type="button">Seguir comprando</button>
           </div>
-        </form>
-      </div>
-      <div id="accountProfile" hidden>
-        <h3 id="accountGreeting"></h3>
-        <p id="accountEmail" class="hint"></p>
-        <div class="modal-actions">
-          <h3>Mis compras</h3>
-          <button class="link-btn" id="logoutBtn" type="button">Cerrar sesión</button>
+          <p class="auth-demo-note">Cuenta de demostración. Tus datos se guardan únicamente en este navegador.</p>
         </div>
-        <div id="salesHistory" class="sales-history" aria-live="polite"></div>
-        <button class="btn" id="accountContinue" type="button">Seguir comprando</button>
       </div>
     </section>
 

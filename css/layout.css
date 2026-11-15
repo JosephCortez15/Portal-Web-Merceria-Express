@@ -3,8 +3,7 @@
 .site-header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--surface); box-shadow: 0 2px 0 var(--line); }
 .site-header .wrap { display: flex; align-items: center; gap: 1rem; padding-block: .6rem; flex-wrap: wrap; }
 .brand { display: inline-flex; align-items: center; gap: .75rem; text-decoration: none; color: var(--denim); margin-right: auto; }
-.brand-mark { display: grid; place-items: center; width: 52px; height: 52px; flex: none; border-radius: 50%; background: linear-gradient(135deg, rgba(255,255,255,.92), rgba(242,234,208,.72)); border: 2px solid rgba(123,144,189,.28); box-shadow: 0 10px 22px rgba(49,72,110,.15); }
-.brand-mark svg { width: 48px; height: 48px; display: block; }
+.brand-mark { display: block; width: 56px; height: 56px; flex: none; border-radius: 50%; object-fit: cover; object-position: center; border: 2px solid rgba(123,144,189,.28); box-shadow: 0 10px 22px rgba(49,72,110,.15); }
 .brand-text { display: grid; line-height: 1; }
 .brand-name { font-family: var(--font-display); font-weight: 700; font-size: clamp(1.05rem, 2vw, 1.5rem); letter-spacing: -.03em; }
 .brand-tag { font-family: var(--font-display); font-weight: 800; font-size: .72rem; letter-spacing: .20em; color: var(--c-orange); text-transform: uppercase; }

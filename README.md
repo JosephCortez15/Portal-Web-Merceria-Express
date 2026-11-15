@@ -33,7 +33,7 @@ merceria-express/
 │   ├── checkout.js     # RF-04
 │   └── auth.js         # RF-05
 └── assets/
-    ├── images/
+    ├── images/         # fotografía de marca y recorte cuadrado del logo
     └── icons/
 ```
 
