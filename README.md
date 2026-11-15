@@ -54,7 +54,7 @@ Tarjeta de prueba: `4242 4242 4242 4242`, cualquier fecha futura y CVV de 3 díg
 
 ## Cuentas y registro de ventas
 
-Se puede crear una cuenta e iniciar sesión desde el botón **Iniciar sesión**. El checkout requiere una sesión activa y las compras quedan asociadas al usuario; el historial está disponible en **Mi cuenta**. Las cuentas, la sesión y las ventas se guardan en `localStorage` del navegador actual, así que no se comparten entre dispositivos ni navegadores y pueden borrarse al limpiar los datos del sitio. Las contraseñas se guardan como derivaciones PBKDF2, y no se conserva el número completo de tarjeta ni el CVV.
+Se puede crear una cuenta e iniciar sesión desde el botón **Iniciar sesión**. Es necesario iniciar sesión para agregar productos al carrito y completar el checkout; las compras quedan asociadas al usuario y el historial está disponible en **Mi cuenta**. Las cuentas, la sesión y las ventas se guardan en `localStorage` del navegador actual, así que no se comparten entre dispositivos ni navegadores y pueden borrarse al limpiar los datos del sitio. Las contraseñas se guardan como derivaciones PBKDF2, y no se conserva el número completo de tarjeta ni el CVV.
 
 Esta función es solo para la demostración front-end: no hay servidor, base de datos central ni autenticación real. Para producción se requiere un backend con almacenamiento seguro, gestión de sesiones y procesamiento de pagos integrado.
 
