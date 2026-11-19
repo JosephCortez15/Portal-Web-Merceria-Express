@@ -12,6 +12,7 @@ Proyecto Integrador Front-End — Tecnologías Web I (SIS-214), Universidad Cat�
 | RF-03 | Carrito persistente: stock, cupones, subtotal, IVA y envío | `js/carrito.js` |
 | RF-04 | Checkout simulado con validación HTML5 y recibo digital | `js/checkout.js` |
 | RF-05 | Registro/inicio de sesión e historial de ventas por cuenta | `js/auth.js`, `js/checkout.js` |
+| RF-06 | Lista de deseados persistente e independiente del carrito | `js/deseados.js`, `js/productos.js` |
 
 ## Estructura
 
@@ -31,7 +32,8 @@ merceria-express/
 │   ├── calculadora.js  # RF-02
 │   ├── carrito.js      # RF-03
 │   ├── checkout.js     # RF-04
-│   └── auth.js         # RF-05
+│   ├── auth.js         # RF-05
+│   └── deseados.js     # RF-06
 └── assets/
     ├── images/         # fotografía de marca y recorte cuadrado del logo
     └── icons/
@@ -57,6 +59,10 @@ Tarjeta de prueba: `4242 4242 4242 4242`, cualquier fecha futura y CVV de 3 díg
 Se puede crear una cuenta e iniciar sesión desde el botón **Iniciar sesión**. Es necesario iniciar sesión para agregar productos al carrito y completar el checkout; las compras quedan asociadas al usuario y el historial está disponible en **Mi cuenta**. Las cuentas, la sesión y las ventas se guardan en `localStorage` del navegador actual, así que no se comparten entre dispositivos ni navegadores y pueden borrarse al limpiar los datos del sitio. Las contraseñas se guardan como derivaciones PBKDF2, y no se conserva el número completo de tarjeta ni el CVV.
 
 Esta función es solo para la demostración front-end: no hay servidor, base de datos central ni autenticación real. Para producción se requiere un backend con almacenamiento seguro, gestión de sesiones y procesamiento de pagos integrado.
+
+## Lista de deseados
+
+Marca productos con el corazón para guardarlos en **Mis deseados** y consultar la lista desde el encabezado o el filtro del catálogo. La lista se guarda en `localStorage` de este navegador, no requiere iniciar sesión y es independiente del carrito: marcar o quitar un favorito no agrega ni elimina productos de la compra. Puedes agregarlos al carrito cuando quieras desde sus tarjetas.
 
 ## Subir a GitHub y publicar
 
