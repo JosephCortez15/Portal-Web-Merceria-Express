@@ -101,6 +101,10 @@ function stockBadge(p) {
   return `<span class="stock ok">Stock: ${fmtQty(p, r)}</span>`;
 }
 
+export function renderWishlistCount() {
+  $('#wishlistCount').textContent = deseadosCount();
+}
+
 export function renderChips() {
   $('#chips').innerHTML = CATS.map(c =>
     `<button type="button" class="chip" style="--chip:${c.color}" data-cat="${c.id}" aria-pressed="${c.id === filtro}">${c.nombre}</button>`
@@ -116,6 +120,7 @@ export function renderCatalog() {
   $('#resultCount').textContent = mostrandoDeseados
     ? `${list.length} producto${list.length === 1 ? '' : 's'} en mis deseados`
     : `${list.length} producto${list.length === 1 ? '' : 's'}`;
+  renderWishlistCount();
   $('#wishlistFilter').setAttribute('aria-pressed', String(mostrandoDeseados));
   $('#wishlistFilterCount').textContent = deseadosCount();
   $('#catalogo-grid').innerHTML = list.length ? list.map(p => {
@@ -153,6 +158,10 @@ export function initCatalog() {
   $('#q').addEventListener('input', e => { busqueda = e.target.value; renderCatalog(); });
   $('#wishlistFilter').addEventListener('click', () => {
     mostrandoDeseados = !mostrandoDeseados;
+    renderCatalog();
+  });
+  $('#wishlistBtn').addEventListener('click', () => {
+    mostrandoDeseados = true;
     renderCatalog();
   });
   $('#catalogo-grid').addEventListener('click', e => {
