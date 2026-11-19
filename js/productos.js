@@ -1,6 +1,7 @@
 /* productos.js — RF-01: datos, ilustraciones, filtro por categoría y búsqueda */
 import { $, money, shade, toast } from './utils.js';
 import { remaining, available, addToCart } from './carrito.js';
+import { initDeseados, hasDeseado, toggleDeseado } from './deseados.js';
 
 export const CATS = [
   { id: 'todo', nombre: 'Todo', color: 'var(--c-green)' },
@@ -113,8 +114,14 @@ export function renderCatalog() {
   $('#resultCount').textContent = `${list.length} producto${list.length === 1 ? '' : 's'}`;
   $('#catalogo-grid').innerHTML = list.length ? list.map(p => {
     const per = p.unidad === 'm' ? ' / metro' : '';
+    const isWishlisted = hasDeseado(p.id);
     return `<article class="product-card" style="--cat:${catColor(p.cat)}" aria-labelledby="prod-${p.id}">
-      <div class="product-card__art">${art(p)}</div>
+      <div class="product-card__art">
+        ${art(p)}
+        <button type="button" class="wishlist-toggle" data-wishlist="${p.id}" aria-pressed="${isWishlisted}" aria-label="${isWishlisted ? 'Quitar' : 'Agregar'} ${p.nombre} ${isWishlisted ? 'de' : 'a'} mis deseados" title="${isWishlisted ? 'Quitar de mis deseados' : 'Agregar a mis deseados'}">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg>
+        </button>
+      </div>
       <span class="product-card__cat">${catName(p.cat)}${p.desc ? ' · ' + p.desc : ''}</span>
       <h3 id="prod-${p.id}">${p.nombre}</h3>
       <p class="product-card__precio">${money(p.precio)}<small>${per}</small></p>
@@ -125,6 +132,7 @@ export function renderCatalog() {
 }
 
 export function initCatalog() {
+  initDeseados(PRODUCTOS.map(p => p.id));
   renderChips();
   renderCatalog();
   $('#chips').addEventListener('click', e => {
@@ -136,6 +144,15 @@ export function initCatalog() {
   });
   $('#q').addEventListener('input', e => { busqueda = e.target.value; renderCatalog(); });
   $('#catalogo-grid').addEventListener('click', e => {
+    const wishlistButton = e.target.closest('[data-wishlist]');
+    if (wishlistButton) {
+      const p = byId(wishlistButton.dataset.wishlist);
+      if (!p) return;
+      const added = toggleDeseado(p.id);
+      renderCatalog();
+      toast(added ? `${p.nombre} agregado a tus deseados.` : `${p.nombre} quitado de tus deseados.`);
+      return;
+    }
     const b = e.target.closest('[data-add]');
     if (!b) return;
     const p = byId(b.dataset.add);
