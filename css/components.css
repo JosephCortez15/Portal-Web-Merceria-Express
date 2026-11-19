@@ -19,6 +19,9 @@
 .chip { border: 2px solid var(--line); background: var(--surface); border-radius: 999px; padding: .4rem 1rem; font-family: var(--font-display); font-weight: 500; }
 .chip:hover { border-color: var(--denim); }
 .chip[aria-pressed="true"] { background: var(--chip, var(--c-green)); border-color: transparent; color: var(--on-fill); font-weight: 600; box-shadow: inset 0 0 0 2px rgba(255,255,255,.55); }
+.wishlist-filter { display: inline-flex; align-items: center; gap: .45rem; flex: none; }
+.wishlist-filter svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.wishlist-filter[aria-pressed="true"] { background: var(--c-pink); border-color: transparent; color: var(--on-fill); }
 .search { flex: 0 1 260px; min-width: 0; }
 .field input, .field select { width: 100%; border: 2px solid var(--line); background: var(--surface); border-radius: 14px; padding: .6rem .85rem; min-height: 44px; }
 .field input:focus, .field select:focus { outline: none; border-color: var(--denim); box-shadow: 0 0 0 3px color-mix(in srgb, var(--denim) 30%, transparent); }
@@ -33,6 +36,11 @@
 .product-card > * { position: relative; z-index: 1; }
 .product-card__art { display: grid; place-items: center; height: 140px; border-radius: 16px; background: color-mix(in srgb, var(--cat) 28%, var(--surface)); }
 .product-card__art svg { height: 112px; width: auto; max-width: 80%; }
+.product-card__art .wishlist-toggle { position: absolute; z-index: 2; top: .55rem; right: .55rem; display: grid; place-items: center; width: 42px; height: 42px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--c-pink); box-shadow: 0 3px 10px rgba(43,42,58,.15); transition: transform .15s, background .15s, color .15s; }
+.product-card__art .wishlist-toggle:hover { transform: scale(1.08); background: var(--c-pink); color: #fff; }
+.product-card__art .wishlist-toggle[aria-pressed="true"] { background: var(--c-pink); color: #fff; }
+.product-card__art .wishlist-toggle svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.9; transition: fill .15s; }
+.product-card__art .wishlist-toggle[aria-pressed="true"] svg { fill: currentColor; }
 .product-card__cat { font-size: .78rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
 .product-card__precio { font-family: var(--font-display); color: var(--denim); font-weight: 700; font-size: 1.3rem; font-variant-numeric: tabular-nums; }
 .product-card__precio small { font-size: .8rem; color: var(--muted); font-weight: 500; }
@@ -41,6 +49,7 @@
 .stock.ok { color: var(--ok); } .stock.low { color: var(--warn); } .stock.out { color: var(--err); }
 .product-card .btn { margin-top: auto; }
 .empty { grid-column: 1 / -1; text-align: center; padding: 2rem; border: 2px dashed var(--line); border-radius: var(--radius); color: var(--muted); }
+.wishlist-empty { display: grid; justify-items: center; gap: .8rem; }
 
 /* ---------- Calculadora ---------- */
 .calc { background: var(--surface-2); border-block: 2px dashed var(--line); }
