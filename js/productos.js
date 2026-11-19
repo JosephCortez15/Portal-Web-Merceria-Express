@@ -1,7 +1,7 @@
 /* productos.js — RF-01: datos, ilustraciones, filtro por categoría y búsqueda */
 import { $, money, shade, toast } from './utils.js';
 import { remaining, available, addToCart } from './carrito.js';
-import { initDeseados, hasDeseado, toggleDeseado } from './deseados.js';
+import { initDeseados, hasDeseado, toggleDeseado, deseadosCount } from './deseados.js';
 
 export const CATS = [
   { id: 'todo', nombre: 'Todo', color: 'var(--c-green)' },
@@ -91,6 +91,7 @@ export function art(p) {
 /* ---------- Render del catálogo ---------- */
 let filtro = 'todo';
 let busqueda = '';
+let mostrandoDeseados = false;
 
 function stockBadge(p) {
   const r = remaining(p);
@@ -110,8 +111,13 @@ export function renderCatalog() {
   const q = busqueda.trim().toLowerCase();
   const list = PRODUCTOS.filter(p =>
     (filtro === 'todo' || p.cat === filtro) &&
+    (!mostrandoDeseados || hasDeseado(p.id)) &&
     (!q || p.nombre.toLowerCase().includes(q) || catName(p.cat).toLowerCase().includes(q)));
-  $('#resultCount').textContent = `${list.length} producto${list.length === 1 ? '' : 's'}`;
+  $('#resultCount').textContent = mostrandoDeseados
+    ? `${list.length} producto${list.length === 1 ? '' : 's'} en mis deseados`
+    : `${list.length} producto${list.length === 1 ? '' : 's'}`;
+  $('#wishlistFilter').setAttribute('aria-pressed', String(mostrandoDeseados));
+  $('#wishlistFilterCount').textContent = deseadosCount();
   $('#catalogo-grid').innerHTML = list.length ? list.map(p => {
     const per = p.unidad === 'm' ? ' / metro' : '';
     const isWishlisted = hasDeseado(p.id);
@@ -128,7 +134,9 @@ export function renderCatalog() {
       <p>${stockBadge(p)}</p>
       <button type="button" class="btn btn--sm" data-add="${p.id}" ${remaining(p) <= 0 ? 'disabled' : ''} aria-label="Agregar ${p.nombre} al carrito">${p.unidad === 'm' ? 'Agregar 1 m' : 'Agregar al carrito'}</button>
     </article>`;
-  }).join('') : '<p class="empty">No encontramos productos con ese filtro. Prueba con otra palabra o categoría.</p>';
+  }).join('') : mostrandoDeseados && deseadosCount() === 0
+    ? '<div class="empty wishlist-empty"><p>Aún no tienes productos deseados.</p><button type="button" class="btn btn--sm" data-clear-wishlist-filter>Explorar catálogo</button></div>'
+    : '<p class="empty">No encontramos productos con ese filtro. Prueba con otra palabra o categoría.</p>';
 }
 
 export function initCatalog() {
@@ -143,7 +151,16 @@ export function initCatalog() {
     renderCatalog();
   });
   $('#q').addEventListener('input', e => { busqueda = e.target.value; renderCatalog(); });
+  $('#wishlistFilter').addEventListener('click', () => {
+    mostrandoDeseados = !mostrandoDeseados;
+    renderCatalog();
+  });
   $('#catalogo-grid').addEventListener('click', e => {
+    if (e.target.closest('[data-clear-wishlist-filter]')) {
+      mostrandoDeseados = false;
+      renderCatalog();
+      return;
+    }
     const wishlistButton = e.target.closest('[data-wishlist]');
     if (wishlistButton) {
       const p = byId(wishlistButton.dataset.wishlist);
