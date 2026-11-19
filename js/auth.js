@@ -1,45 +1,27 @@
-/* auth.js — cuentas de demostración e historial local de compras */
-import { $, money, store, toast, validateForm } from './utils.js';
+/* auth.js — cuentas con el backend: registro, inicio de sesión e historial de compras (RF-05)
+ * La contraseña viaja al servidor (por HTTPS al publicar) y allí se guarda solo como hash scrypt.
+ * En el navegador queda únicamente el token de sesión, nunca la contraseña. */
+import { $, money, toast, validateForm } from './utils.js';
 import { openCart, showView } from './carrito.js';
+import { getToken, setToken, registrar, iniciarSesion, cerrarSesion, getUsuarioActual, getMisPedidos } from './api.js';
+import { sincronizarConCuenta, limpiarDeseadosLocales } from './deseados.js';
 
-const ACCOUNT_KEY = 'me.accounts';
-const SALES_KEY = 'me.sales';
-const SESSION_KEY = 'me.session';
-const PBKDF2_ITERATIONS = 210000;
 let checkoutPending = false;
-
-const accounts = () => store.get(ACCOUNT_KEY, []);
+let currentUser = null;   // { id, nombre, email, telefono, rol } que devuelve la API
 
 export function getCurrentUser() {
-  const id = store.get(SESSION_KEY, null);
-  return accounts().find(account => account.id === id) || null;
+  return currentUser;
 }
 
-function bytesToBase64(bytes) {
-  return btoa(String.fromCharCode(...bytes));
-}
-
-function base64ToBytes(value) {
-  return Uint8Array.from(atob(value), char => char.charCodeAt(0));
-}
-
-async function passwordHash(password, salt) {
-  if (!crypto.subtle) throw new Error('El navegador no permite proteger contraseñas en este contexto. Abre el sitio con HTTPS o localhost.');
-  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits({
-    name: 'PBKDF2',
-    salt,
-    iterations: PBKDF2_ITERATIONS,
-    hash: 'SHA-256'
-  }, key, 256);
-  return new Uint8Array(bits);
-}
-
-function sameBytes(a, b) {
-  if (a.length !== b.length) return false;
-  let difference = 0;
-  for (let i = 0; i < a.length; i += 1) difference |= a[i] ^ b[i];
-  return difference === 0;
+/** Al cargar la página: si hay token guardado, pregunta al servidor quién es el usuario. */
+export async function restaurarSesion() {
+  if (!getToken()) return;
+  try {
+    currentUser = (await getUsuarioActual()).usuario;
+    await sincronizarConCuenta().catch(() => {});
+  } catch {
+    currentUser = null;   // token vencido o servidor caído: se pedirá iniciar sesión
+  }
 }
 
 function escapeHTML(value) {
@@ -48,14 +30,24 @@ function escapeHTML(value) {
   })[char]);
 }
 
-function renderSales(user) {
-  const sales = store.get(SALES_KEY, []).filter(sale => sale.userId === user.id);
-  $('#salesHistory').innerHTML = sales.length
-    ? `<ul class="sales-list">${sales.slice().reverse().map(sale => `
-        <li><div><b>${escapeHTML(sale.num)}</b><span>${escapeHTML(sale.fecha)}</span>
-          <span>${sale.lines.map(line => `${escapeHTML(line.name)} × ${escapeHTML(line.quantity)}`).join(', ')}</span></div>
-          <b>${money(sale.total)}</b></li>`).join('')}</ul>`
-    : '<p class="placeholder-result">Todavía no tienes compras registradas.</p>';
+const fechaCorta = iso => new Date(iso).toLocaleString('es-BO', { dateStyle: 'long', timeStyle: 'short' });
+const cantidad = q => (Number.isInteger(q) ? String(q) : q.toFixed(1));
+
+/** Pinta el historial de compras guardado en la base de datos. */
+export async function renderSales() {
+  if (!currentUser) return;
+  $('#salesHistory').innerHTML = '<p class="placeholder-result">Cargando tus compras…</p>';
+  try {
+    const sales = await getMisPedidos();
+    $('#salesHistory').innerHTML = sales.length
+      ? `<ul class="sales-list">${sales.map(sale => `
+          <li><div><b>${escapeHTML(sale.numero)}</b><span>${escapeHTML(fechaCorta(sale.fecha))}</span>
+            <span>${(sale.lineas || []).map(line => `${escapeHTML(line.nombre)} × ${escapeHTML(cantidad(line.cantidad))}`).join(', ')}</span></div>
+            <b>${money(sale.total)}</b></li>`).join('')}</ul>`
+      : '<p class="placeholder-result">Todavía no tienes compras registradas.</p>';
+  } catch (error) {
+    $('#salesHistory').innerHTML = `<p class="placeholder-result">${escapeHTML(error.message)}</p>`;
+  }
 }
 
 function updateAccountUI() {
@@ -66,11 +58,12 @@ function updateAccountUI() {
   $('#nombre').readOnly = Boolean(user);
   $('#email').readOnly = Boolean(user);
   if (user) {
-    $('#accountGreeting').textContent = `Hola, ${user.name}`;
+    $('#accountGreeting').textContent = `Hola, ${user.nombre}`;
     $('#accountEmail').textContent = user.email;
-    renderSales(user);
-    $('#nombre').value = user.name;
+    renderSales();
+    $('#nombre').value = user.nombre;
     $('#email').value = user.email;
+    if (user.telefono && !$('#tel').value) $('#tel').value = user.telefono;
   } else {
     $('#nombre').value = '';
     $('#email').value = '';
@@ -104,6 +97,12 @@ function showUserAccount() {
   showView('account');
 }
 
+/** El servidor respondió 401 (sesión vencida): se olvida el usuario en esta pestaña. */
+export function sesionVencida() {
+  currentUser = null;
+  updateAccountUI();
+}
+
 export function requireAuth() {
   if (getCurrentUser()) return true;
   openCart('account');
@@ -119,12 +118,18 @@ export function requireCheckoutAuth() {
   return false;
 }
 
-export function recordSale(sale) {
-  const user = getCurrentUser();
-  if (!user) throw new Error('Se requiere una cuenta activa para registrar la venta.');
-  const sales = store.get(SALES_KEY, []);
-  sales.push({ ...sale, userId: user.id });
-  store.set(SALES_KEY, sales);
+/** Después de iniciar sesión o registrarse: deseados de la cuenta y vuelta al flujo donde estaba. */
+async function despuesDeEntrar(form, mensaje) {
+  updateAccountUI();
+  form.reset();
+  await sincronizarConCuenta().catch(() => {});
+  if (checkoutPending) {
+    checkoutPending = false;
+    openCart('pay');
+  } else {
+    showUserAccount();
+  }
+  toast(mensaje);
 }
 
 export function initAuth() {
@@ -150,33 +155,19 @@ export function initAuth() {
     event.preventDefault();
     clearStatus();
     if (!validateForm(event.currentTarget)) return;
-    const data = new FormData(event.currentTarget);
-    const email = String(data.get('email')).trim().toLowerCase();
-    const password = String(data.get('password'));
-    const user = accounts().find(account => account.email === email);
-    if (!user) {
-      showAuthError('Correo o contraseña incorrectos.');
-      return;
-    }
-
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const boton = form.querySelector('[type=submit]');
+    boton.disabled = true;
     try {
-      const actual = await passwordHash(password, base64ToBytes(user.salt));
-      if (!sameBytes(actual, base64ToBytes(user.passwordHash))) {
-        showAuthError('Correo o contraseña incorrectos.');
-        return;
-      }
-      store.set(SESSION_KEY, user.id);
-      updateAccountUI();
-      event.currentTarget.reset();
-      if (checkoutPending) {
-        checkoutPending = false;
-        openCart('pay');
-      } else {
-        showUserAccount();
-      }
-      toast(`Bienvenido, ${user.name}.`);
+      const r = await iniciarSesion(String(data.get('email')).trim(), String(data.get('password')));
+      setToken(r.token);
+      currentUser = r.usuario;
+      await despuesDeEntrar(form, `Bienvenido, ${r.usuario.nombre}.`);
     } catch (error) {
       showAuthError(error.message || 'No se pudo iniciar sesión.');
+    } finally {
+      boton.disabled = false;
     }
   });
 
@@ -184,44 +175,27 @@ export function initAuth() {
     event.preventDefault();
     clearStatus();
     if (!validateForm(event.currentTarget)) return;
-    const data = new FormData(event.currentTarget);
-    const email = String(data.get('email')).trim().toLowerCase();
-    const userAccounts = accounts();
-    if (userAccounts.some(account => account.email === email)) {
-      showAuthError('Ya existe una cuenta con ese correo.', '#registerMsg');
-      return;
-    }
-
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const boton = form.querySelector('[type=submit]');
+    boton.disabled = true;
     try {
-      const salt = crypto.getRandomValues(new Uint8Array(16));
-      const hash = await passwordHash(String(data.get('password')), salt);
-      const user = {
-        id: crypto.randomUUID(),
-        name: String(data.get('name')).trim(),
-        email,
-        salt: bytesToBase64(salt),
-        passwordHash: bytesToBase64(hash),
-        createdAt: new Date().toISOString()
-      };
-      userAccounts.push(user);
-      store.set(ACCOUNT_KEY, userAccounts);
-      store.set(SESSION_KEY, user.id);
-      updateAccountUI();
-      event.currentTarget.reset();
-      if (checkoutPending) {
-        checkoutPending = false;
-        openCart('pay');
-      } else {
-        showUserAccount();
-      }
-      toast('Cuenta creada correctamente.');
+      const r = await registrar(String(data.get('name')).trim(), String(data.get('email')).trim(), String(data.get('password')));
+      setToken(r.token);
+      currentUser = r.usuario;
+      await despuesDeEntrar(form, 'Cuenta creada correctamente.');
     } catch (error) {
       showAuthError(error.message || 'No se pudo crear la cuenta.', '#registerMsg');
+    } finally {
+      boton.disabled = false;
     }
   });
 
-  $('#logoutBtn').addEventListener('click', () => {
-    store.del(SESSION_KEY);
+  $('#logoutBtn').addEventListener('click', async () => {
+    await cerrarSesion().catch(() => {});   // invalida el token en el servidor
+    setToken(null);
+    currentUser = null;
+    limpiarDeseadosLocales();
     updateAccountUI();
     setAuthMode('login');
     showView('account');

@@ -2,41 +2,23 @@
 import { $, money, shade, toast } from './utils.js';
 import { remaining, available, addToCart } from './carrito.js';
 import { initDeseados, hasDeseado, toggleDeseado, deseadosCount } from './deseados.js';
+import { getCategorias, getProductos } from './api.js';
 
-export const CATS = [
-  { id: 'todo', nombre: 'Todo', color: 'var(--c-green)' },
-  { id: 'hilos', nombre: 'Hilos', color: 'var(--c-pink)' },
-  { id: 'botones', nombre: 'Botones', color: 'var(--c-yellow)' },
-  { id: 'cierres', nombre: 'Cierres', color: 'var(--c-orange)' },
-  { id: 'telas', nombre: 'Telas por metro', color: 'var(--c-cyan)' },
-  { id: 'herramientas', nombre: 'Herramientas', color: 'var(--c-green)' }
-];
+/* Se llenan desde el backend con cargarCatalogo(); 'todo' es solo un filtro del front */
+export const CATS = [{ id: 'todo', nombre: 'Todo', color: 'var(--c-green)' }];
+export const PRODUCTOS = [];
 
-export const PRODUCTOS = [
-  { id: 101, cat: 'hilos', nombre: 'Hilo de poliéster rojo', precio: 8.5, stock: 24, color: '#D6443F', unidad: 'carrete', desc: '200 m' },
-  { id: 102, cat: 'hilos', nombre: 'Hilo de algodón azul', precio: 9, stock: 18, color: '#3F6190', unidad: 'carrete', desc: '200 m' },
-  { id: 103, cat: 'hilos', nombre: 'Hilo de poliéster verde', precio: 8.5, stock: 3, color: '#4FA533', unidad: 'carrete', desc: '200 m' },
-  { id: 104, cat: 'hilos', nombre: 'Hilo mostaza', precio: 8.5, stock: 30, color: '#F6CF4A', unidad: 'carrete', desc: '200 m' },
-  { id: 105, cat: 'hilos', nombre: 'Hilo rosa', precio: 8.5, stock: 12, color: '#F08BB4', unidad: 'carrete', desc: '200 m' },
-  { id: 106, cat: 'hilos', nombre: 'Hilo naranja', precio: 8.5, stock: 0, color: '#F29A3B', unidad: 'carrete', desc: '200 m' },
-  { id: 201, cat: 'botones', nombre: 'Botones de madera x12', precio: 12, stock: 40, color: '#8B5A34', unidad: 'bolsa', holes: 2 },
-  { id: 202, cat: 'botones', nombre: 'Botones rosa x10', precio: 10, stock: 25, color: '#F08BB4', unidad: 'bolsa', holes: 4 },
-  { id: 203, cat: 'botones', nombre: 'Botones cian x10', precio: 10, stock: 5, color: '#4CC3E3', unidad: 'bolsa', holes: 4 },
-  { id: 204, cat: 'botones', nombre: 'Botones mostaza x8', precio: 9, stock: 16, color: '#F6CF4A', unidad: 'bolsa', holes: 2 },
-  { id: 301, cat: 'cierres', nombre: 'Cierre rojo 20 cm', precio: 6, stock: 50, color: '#D6443F', unidad: 'pieza' },
-  { id: 302, cat: 'cierres', nombre: 'Cierre azul 40 cm', precio: 9, stock: 22, color: '#3F6190', unidad: 'pieza' },
-  { id: 303, cat: 'cierres', nombre: 'Cierre invisible 25 cm', precio: 7.5, stock: 14, color: '#F2EEE2', unidad: 'pieza' },
-  { id: 401, cat: 'telas', nombre: 'Algodón a rayas cian', precio: 32, stock: 40, color: '#4CC3E3', unidad: 'm', patron: 'rayas', step: 0.5 },
-  { id: 402, cat: 'telas', nombre: 'Popelina verde lisa', precio: 28, stock: 25, color: '#6CC24A', unidad: 'm', patron: 'lisa', step: 0.5 },
-  { id: 403, cat: 'telas', nombre: 'Lunares sobre rosa', precio: 35, stock: 18, color: '#F08BB4', unidad: 'm', patron: 'lunares', step: 0.5 },
-  { id: 404, cat: 'telas', nombre: 'Franela amarilla', precio: 30, stock: 6, color: '#F6CF4A', unidad: 'm', patron: 'lisa', step: 0.5 },
-  { id: 405, cat: 'telas', nombre: 'Jean denim', precio: 45, stock: 30, color: '#3F6190', unidad: 'm', patron: 'lisa', step: 0.5 },
-  { id: 501, cat: 'herramientas', nombre: 'Tijeras de sastre', precio: 65, stock: 9, color: '#F29A3B', unidad: 'pieza', tool: 'tijeras' },
-  { id: 502, cat: 'herramientas', nombre: 'Set de agujas', precio: 15, stock: 35, color: '#4CC3E3', unidad: 'set', tool: 'aguja' },
-  { id: 503, cat: 'herramientas', nombre: 'Cinta métrica', precio: 12, stock: 28, color: '#F6CF4A', unidad: 'pieza', tool: 'cinta' },
-  { id: 504, cat: 'herramientas', nombre: 'Dedal metálico', precio: 8, stock: 2, color: '#B9C2CF', unidad: 'pieza', tool: 'dedal' },
-  { id: 505, cat: 'herramientas', nombre: 'Alfileres con cabeza', precio: 10, stock: 44, color: '#F08BB4', unidad: 'caja', tool: 'alfiler' }
-];
+/** Pide categorías y productos a la API y reemplaza el contenido de CATS y PRODUCTOS. */
+export async function cargarCatalogo() {
+  const [cats, prods] = await Promise.all([getCategorias(), getProductos()]);
+  CATS.splice(1, CATS.length, ...cats);
+  PRODUCTOS.splice(0, PRODUCTOS.length, ...prods);
+}
+
+/** Vuelve a pedir solo los productos (stock actualizado después de una compra). */
+export async function recargarProductos() {
+  PRODUCTOS.splice(0, PRODUCTOS.length, ...(await getProductos()));
+}
 
 export function byId(id) { return PRODUCTOS.find(p => p.id === +id); }
 export function catName(id) { return CATS.find(c => c.id === id)?.nombre ?? ''; }

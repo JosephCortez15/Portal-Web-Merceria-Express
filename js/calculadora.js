@@ -1,11 +1,10 @@
 /* calculadora.js — RF-02: cálculo de metros de tela y carretes de hilo */
 import { $, $$, r2, money, validateForm, toast } from './utils.js';
 import { PRODUCTOS, byId } from './productos.js';
-import { addToCart } from './carrito.js';
+import { addToCart, CFG } from './carrito.js';
 
-const CARRETE_M = 200;   // metros de hilo por carrete
-const MARGEN = 0.10;     // desperdicio
-const COSTURA = 0.05;    // 5 cm de costura por lado
+/* Parámetros de la fórmula: vienen de GET /api/configuracion (configuracion_sistema); estos son los valores por defecto */
+const P = () => ({ margen: 0.10, costura: 0.05, pasadas: 3, extraHilo: 0.15, redondeoTela: 0.5, ...(CFG.calc || {}) });
 let lastCalc = null;
 
 export function renderCalcSelects() {
@@ -16,17 +15,25 @@ export function renderCalcSelects() {
   if (h) $('#hiloSel').value = h;
 }
 
+/* Cada tela trae su ancho desde la BD (ancho_tela_m): se selecciona solo */
+function sincronizarAncho() {
+  const tela = byId($('#telaSel').value);
+  const sel = $('#anchoTela');
+  if (tela?.ancho && [...sel.options].some(o => +o.value === tela.ancho)) sel.value = String(tela.ancho);
+}
+
 export function calcularMateriales(form) {
   const L = +form.largo.value, A = +form.ancho.value, n = +form.piezas.value, W = +form.anchoTela.value;
-  const area = (L + COSTURA * 2) * (A + COSTURA * 2) * n;
-  const metros = Math.ceil((area / W) * (1 + MARGEN) * 2) / 2;      // redondeo a 0.5 m
-  const hiloM = 2 * (L + A) * n * 3 * 1.15;                         // perímetro x 3 pasadas + 15 %
-  const carretes = Math.max(1, Math.ceil(hiloM / CARRETE_M));
+  const { margen, costura, pasadas, extraHilo, redondeoTela } = P();
   const tela = byId(form.telaSel.value), hilo = byId(form.hiloSel.value);
+  const area = (L + costura * 2) * (A + costura * 2) * n;
+  const metros = Math.ceil((area / W) * (1 + margen) / redondeoTela) * redondeoTela;   // redondeo a 0.5 m
+  const hiloM = 2 * (L + A) * n * pasadas * (1 + extraHilo);                          // perímetro x pasadas + extra
+  const carretes = Math.max(1, Math.ceil(hiloM / (hilo.metrosCarrete || 200)));
   return {
     L, A, n, W, area: r2(area), metros, hiloM: Math.round(hiloM), carretes, tela, hilo,
     costo: r2(metros * tela.precio + carretes * hilo.precio),
-    ancha: Math.min(L, A) + COSTURA * 2 > W
+    ancha: Math.min(L, A) + costura * 2 > W
   };
 }
 
@@ -58,6 +65,8 @@ const PLACEHOLDER = '<p class="placeholder-result">Presiona “Calcular” para 
 export function initCalculadora() {
   const form = $('#calcForm');
   renderCalcSelects();
+  sincronizarAncho();
+  $('#telaSel').addEventListener('change', sincronizarAncho);
 
   form.addEventListener('submit', e => {
     e.preventDefault();

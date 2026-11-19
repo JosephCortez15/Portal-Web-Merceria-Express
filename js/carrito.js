@@ -1,14 +1,13 @@
 /* carrito.js — RF-03: stock, cupones, totales (subtotal, IVA, envío), localStorage y CartModal */
 import { $, $$, r2, money, store, toast, validateForm } from './utils.js';
 import { byId, art, fmtQty } from './productos.js';
+import { validarCupon } from './api.js';
 
-export const COUPONS = { COSTURA10: 10, LANA15: 15, BIENVENIDA5: 5 };
-export const IVA = 0.13;
-export const ENVIO = 20;
-export const ENVIO_GRATIS = 250;
+/* Parámetros de venta: se reemplazan con GET /api/configuracion al iniciar (main.js) */
+export const CFG = { iva: 0.13, envio: 20, envioGratis: 250, calc: null };
 
-/* Estado compartido (otros módulos lo leen y lo modifican a través de estas funciones) */
-export const state = { cart: {}, coupon: null, sold: {} };
+/* Estado compartido. coupon = { codigo, tipo, valor, porcentaje } devuelto por la API, o null */
+export const state = { cart: {}, coupon: null };
 
 let onChange = () => {};
 let beforeStoreAction = () => true;
@@ -21,14 +20,13 @@ function allowStoreAction() {
   return beforeStoreAction ? beforeStoreAction() : true;
 }
 
-export const available = p => r2(p.stock - (state.sold[p.id] || 0));
+export const available = p => r2(p.stock);   // stock real que devuelve la API
 export const remaining = p => r2(available(p) - (state.cart[p.id] || 0));
 export const stepOf = p => p.step || 1;
 
 export function save() {
   store.set('me.cart', state.cart);
   store.set('me.coupon', state.coupon);
-  store.set('me.sold', state.sold);
 }
 
 export function refresh() { renderCart(); onChange(); }
@@ -54,18 +52,19 @@ export function setQty(id, q) {
 export function totals() {
   const lines = Object.entries(state.cart).map(([id, q]) => ({ p: byId(id), q }));
   const subtotal = r2(lines.reduce((s, l) => s + l.p.precio * l.q, 0));
-  const pct = state.coupon ? COUPONS[state.coupon] : 0;
-  const descuento = r2(subtotal * pct / 100);
+  const c = state.coupon;
+  const pct = c?.porcentaje || 0;
+  const descuento = !c ? 0 : c.tipo === 'MONTO_FIJO' ? r2(Math.min(c.valor, subtotal)) : r2(subtotal * pct / 100);
   const base = r2(subtotal - descuento);
-  const iva = r2(base * IVA);
-  const envio = lines.length ? (base >= ENVIO_GRATIS ? 0 : ENVIO) : 0;
+  const iva = r2(base * CFG.iva);
+  const envio = lines.length ? (base >= CFG.envioGratis ? 0 : CFG.envio) : 0;
   return { lines, subtotal, pct, descuento, iva, envio, total: r2(base + iva + envio) };
 }
 
 export function totalsHTML(t) {
   return `<dt>Subtotal</dt><dd>${money(t.subtotal)}</dd>
-    ${t.pct ? `<dt class="disc">Descuento ${state.coupon} (${t.pct} %)</dt><dd class="disc">− ${money(t.descuento)}</dd>` : ''}
-    <dt>IVA (13 %)</dt><dd>${money(t.iva)}</dd>
+    ${t.descuento ? `<dt class="disc">Descuento ${state.coupon.codigo}${t.pct ? ` (${t.pct} %)` : ''}</dt><dd class="disc">− ${money(t.descuento)}</dd>` : ''}
+    <dt>IVA (${Math.round(CFG.iva * 100)} %)</dt><dd>${money(t.iva)}</dd>
     <dt>Envío ${t.envio === 0 && t.lines.length ? '(gratis)' : ''}</dt><dd>${money(t.envio)}</dd>
     <dt class="total">Total</dt><dd class="total">${money(t.total)}</dd>`;
 }
@@ -101,12 +100,12 @@ export function renderCart() {
   const msg = $('#couponMsg');
   if (state.coupon) {
     msg.className = 'coupon-msg ok';
-    msg.textContent = `Cupón ${state.coupon} aplicado: ${COUPONS[state.coupon]} % de descuento.`;
+    msg.textContent = `Cupón ${state.coupon.codigo} aplicado` + (state.coupon.porcentaje ? `: ${state.coupon.porcentaje} % de descuento.` : '.');
   } else if (!msg.classList.contains('bad')) {
     msg.textContent = '';
   }
   if (t.lines.length && t.envio > 0) {
-    const falta = r2(ENVIO_GRATIS - (t.subtotal - t.descuento));
+    const falta = r2(CFG.envioGratis - (t.subtotal - t.descuento));
     $('#totals').insertAdjacentHTML('beforeend', `<dt class="hint" style="grid-column:1/-1">Te faltan ${money(falta)} para envío gratis.</dt>`);
   }
 }
@@ -136,9 +135,9 @@ export function closeCart() { modal().close(); }
 export function initCarrito() {
   /* Recupera el estado guardado y descarta productos que ya no existen */
   state.cart = Object.fromEntries(Object.entries(store.get('me.cart', {})).filter(([id, q]) => byId(id) && q > 0));
-  state.sold = store.get('me.sold', {});
   const c = store.get('me.coupon', null);
-  state.coupon = c && COUPONS[c] ? c : null;
+  state.coupon = c && typeof c === 'object' && c.codigo ? c : null;   // el backend lo vuelve a validar al pagar
+  store.del('me.sold');                                                // ya no se usa: el stock viene de la BD
 
   $('#cartBtn').addEventListener('click', () => {
     if (!allowStoreAction()) return;
@@ -163,18 +162,27 @@ export function initCarrito() {
     toast('Carrito vaciado.');
   });
 
-  $('#couponForm').addEventListener('submit', e => {
+  $('#couponForm').addEventListener('submit', async e => {
     e.preventDefault();
-    const inp = $('#coupon'), msg = $('#couponMsg');
+    const inp = $('#coupon'), msg = $('#couponMsg'), btn = e.target.querySelector('[type=submit]');
     if (!validateForm(e.target)) { msg.textContent = ''; return; }
     const code = inp.value.trim().toUpperCase();
-    if (COUPONS[code]) {
-      state.coupon = code; msg.className = 'coupon-msg ok'; save(); inp.value = ''; renderCart();
-      toast(`Cupón ${code} aplicado.`);
-    } else {
-      state.coupon = null; save(); renderCart();
-      msg.className = 'coupon-msg bad'; msg.textContent = 'Cupón no válido.';
-      inp.setAttribute('aria-invalid', 'true');
+    btn.disabled = true;
+    try {
+      const r = await validarCupon(code, totals().subtotal);
+      if (r.valido) {
+        state.coupon = { codigo: r.codigo, tipo: r.tipo, valor: r.valor, porcentaje: r.porcentaje };
+        msg.className = 'coupon-msg ok'; save(); inp.value = ''; renderCart();
+        toast(`Cupón ${r.codigo} aplicado.`);
+      } else {
+        state.coupon = null; save(); renderCart();
+        msg.className = 'coupon-msg bad'; msg.textContent = r.mensaje || 'Cupón no válido.';
+        inp.setAttribute('aria-invalid', 'true');
+      }
+    } catch (err) {
+      msg.className = 'coupon-msg bad'; msg.textContent = err.message;
+    } finally {
+      btn.disabled = false;
     }
   });
   $('#coupon').addEventListener('input', () => {
