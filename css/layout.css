@@ -13,6 +13,9 @@
 .icon-btn { position: relative; display: inline-flex; align-items: center; gap: .45rem; border: 2px solid var(--line); background: var(--surface); border-radius: 999px; padding: .45rem .9rem; font-family: var(--font-display); font-weight: 600; }
 .icon-btn:hover { border-color: var(--denim); }
 .icon-btn svg { width: 22px; height: 22px; }
+.wishlist-link { text-decoration: none; }
+.wishlist-link svg { fill: none; stroke: var(--c-pink); stroke-width: 1.9; transition: fill .15s; }
+.wishlist-link:hover svg { fill: var(--c-pink); }
 .badge { min-width: 1.5rem; height: 1.5rem; padding-inline: .4rem; display: inline-grid; place-items: center; background: var(--c-pink); color: var(--on-fill); border-radius: 999px; font-size: .85rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .badge.bump { animation: bump .35s; }
 @keyframes bump { 50% { transform: scale(1.35); } }
