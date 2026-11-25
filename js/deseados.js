@@ -8,15 +8,17 @@ const STORAGE_KEY = 'me.wishlist';
 let productIds = new Set();
 let ids = new Set();
 let onChange = () => {};
+let beforeWishlistAction = () => false;
 
 const guardar = () => store.set(STORAGE_KEY, [...ids]);
 
 export function setDeseadosOnChange(fn) { onChange = fn; }
+export function setWishlistActionGuard(fn) { beforeWishlistAction = fn; }
 
 export function initDeseados(validProductIds) {
   productIds = new Set(validProductIds);
   const saved = store.get(STORAGE_KEY, []);
-  ids = new Set(Array.isArray(saved)
+  ids = new Set(getToken() && Array.isArray(saved)
     ? saved.map(Number).filter(id => productIds.has(id))
     : []);
   guardar();
@@ -43,6 +45,7 @@ export function hasDeseado(id) {
 }
 
 export function toggleDeseado(id) {
+  if (!beforeWishlistAction()) return null;
   id = Number(id);
   if (!productIds.has(id)) return false;
   const added = !ids.has(id);

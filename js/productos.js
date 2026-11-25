@@ -157,6 +157,7 @@ export function initCatalog() {
       const p = byId(wishlistButton.dataset.wishlist);
       if (!p) return;
       const added = toggleDeseado(p.id);
+      if (added === null) return;
       renderCatalog();
       toast(added ? `${p.nombre} agregado a tus deseados.` : `${p.nombre} quitado de tus deseados.`);
       return;
