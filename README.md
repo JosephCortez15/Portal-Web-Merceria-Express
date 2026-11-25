@@ -13,6 +13,7 @@ Proyecto Integrador Front-End — Tecnologías Web I (SIS-214), Universidad Cat�
 | RF-04 | Checkout simulado con validación HTML5 y recibo digital | `js/checkout.js` |
 | RF-05 | Registro/inicio de sesión e historial de ventas por cuenta | `js/auth.js`, `js/checkout.js` |
 | RF-06 | Lista de deseados persistente e independiente del carrito | `js/deseados.js`, `js/productos.js` |
+| Administración | Dashboard local de demostración | `js/admin.js` |
 
 ## Estructura
 
@@ -33,7 +34,8 @@ merceria-express/
 │   ├── carrito.js      # RF-03
 │   ├── checkout.js     # RF-04
 │   ├── auth.js         # RF-05
-│   └── deseados.js     # RF-06
+│   ├── deseados.js     # RF-06
+│   └── admin.js        # Panel de administración local
 └── assets/
     ├── images/         # fotografía de marca y recorte cuadrado del logo
     └── icons/
@@ -62,7 +64,13 @@ Esta función es solo para la demostración front-end: no hay servidor, base de 
 
 ## Lista de deseados
 
-Marca productos con el corazón para guardarlos en **Mis deseados** y consultar la lista desde el encabezado o el filtro del catálogo. La lista se guarda en `localStorage` de este navegador, no requiere iniciar sesión y es independiente del carrito: marcar o quitar un favorito no agrega ni elimina productos de la compra. Puedes agregarlos al carrito cuando quieras desde sus tarjetas.
+Inicia sesión para marcar productos con el corazón y guardarlos en **Mis deseados**. Si aún no tienes sesión, la tienda abre el inicio de sesión y no modifica la lista. Los deseados se sincronizan con la cuenta y son independientes del carrito: marcar o quitar un favorito no agrega ni elimina productos de la compra.
+
+## Panel de administración de demostración
+
+El administrador de pruebas es independiente de la base de datos. Credenciales locales: `admin@merceriaexpress.test` / `MerceriaDemo2026!`. Su sesión usa una clave separada de `localStorage`, no genera ni requiere un token de API y puede cerrarse desde **Mi cuenta**. El botón **Administración** aparece únicamente con esa sesión de prueba y **Volver a tienda** regresa al catálogo. El registro normal no concede privilegios administrativos. Incluye indicadores, reportes por día/semana/mes/año con gráficos SVG de ingresos, ventas de muestra con observaciones editables, inventario de demostración con altas, aumentos, reducciones validadas e historial, y un registro local de notificaciones simuladas.
+
+Los datos están marcados como demostración y se guardan en `localStorage` de este navegador. El panel no depende de la API ni de la base de datos de la tienda; el inventario es independiente del catálogo del cliente. Las notificaciones nunca se envían: su estado indica explícitamente que son simulaciones locales.
 
 ## Subir a GitHub y publicar
 
