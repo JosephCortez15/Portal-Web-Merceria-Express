@@ -5,12 +5,13 @@ import { state, initCarrito, refresh, setOnChange, setStoreActionGuard, setCheck
 import { initCalculadora, renderCalcSelects } from './calculadora.js';
 import { initCheckout } from './checkout.js';
 import { initAuth, requireAuth, requireCheckoutAuth, restaurarSesion } from './auth.js';
-import { setDeseadosOnChange } from './deseados.js';
+import { setDeseadosOnChange, setWishlistActionGuard } from './deseados.js';
 import { getConfiguracion } from './api.js';
 
 /* Cuando cambia el carrito o los deseados se refresca el catálogo y la calculadora */
 setOnChange(() => { renderCatalog(); renderCalcSelects(); });
 setDeseadosOnChange(() => renderCatalog());
+setWishlistActionGuard(requireAuth);
 
 /* Ilustración decorativa del hero (no depende de la API) */
 (function hero() {
@@ -42,6 +43,8 @@ $('#resetDemo').addEventListener('click', async () => {
 /* Arranque: primero los datos del servidor, después los módulos que los usan */
 async function iniciar() {
   $('#catalogo-grid').innerHTML = '<p class="empty" role="status">Cargando catálogo…</p>';
+  initAuth();
+  await restaurarSesion();
   try {
     const [cfg] = await Promise.all([getConfiguracion(), cargarCatalogo()]);
     Object.assign(CFG, cfg);
@@ -53,9 +56,8 @@ async function iniciar() {
   }
   initCarrito();
   initCatalog();              // también prepara la lista de deseados
-  await restaurarSesion();    // si había sesión, recupera el usuario y sus deseados
-  initAuth();
   setStoreActionGuard(requireAuth);
+  setWishlistActionGuard(requireAuth);
   setCheckoutGuard(requireCheckoutAuth);
   initCalculadora();
   initCheckout();
