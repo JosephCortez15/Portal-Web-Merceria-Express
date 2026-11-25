@@ -31,6 +31,7 @@
     <button class="icon-btn" id="themeBtn" type="button" aria-label="Cambiar entre tema claro y oscuro" title="Tema claro / oscuro">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
     </button>
+    <button class="icon-btn" id="adminToggle" type="button" aria-controls="adminView" aria-pressed="false" hidden>Administración</button>
     <button class="icon-btn" id="accountBtn" type="button" aria-haspopup="dialog">Iniciar sesión</button>
     <a class="icon-btn wishlist-link" id="wishlistBtn" href="#catalogo" aria-label="Ver mis productos deseados">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg>
@@ -44,6 +45,7 @@
 </header>
 
 <main id="inicio">
+  <div id="storefrontView">
   <section class="hero" aria-labelledby="hero-title">
     <div class="wrap">
       <div class="hero-copy">
@@ -152,6 +154,115 @@
       </div>
     </div>
   </section>
+  </div>
+
+  <section class="admin-view" id="adminView" aria-labelledby="admin-title" hidden>
+    <div class="wrap">
+      <div class="section-head admin-heading">
+        <div>
+          <p class="eyebrow">Administración · modo demostración</p>
+          <h1 id="admin-title" tabindex="-1">Panel de control</h1>
+          <p>Ventas e inventario de ejemplo guardados únicamente en este navegador.</p>
+        </div>
+        <span class="demo-label">DATOS DE DEMOSTRACIÓN</span>
+      </div>
+      <p class="sim-banner admin-sim" role="note">Este panel funciona sin base de datos. Las ventas, el stock y las notificaciones que ves aquí son datos locales de prueba; no representan operaciones reales ni se sincronizan con la tienda.</p>
+      <p class="admin-status" id="adminStatus" role="status" aria-live="polite"></p>
+
+      <section class="admin-stats" aria-label="Indicadores">
+        <article class="admin-card"><span>Ventas de hoy</span><strong id="metricTodaySales">—</strong><small id="metricTodayIncome">—</small></article>
+        <article class="admin-card"><span>Ventas este mes</span><strong id="metricMonthSales">—</strong><small id="metricMonthIncome">—</small></article>
+        <article class="admin-card"><span>Productos de prueba</span><strong id="metricProducts">—</strong><small id="metricLowStock">—</small></article>
+      </section>
+
+      <section class="admin-panel" aria-labelledby="report-title">
+        <div class="admin-panel__head">
+          <div><h2 id="report-title">Reportes de ventas</h2><p>Elige un periodo y una fecha para consultar sus resultados.</p></div>
+          <form class="admin-filters" id="reportForm">
+            <div class="field"><label for="reportPeriod">Periodo</label>
+              <select id="reportPeriod" name="period">
+                <option value="day">Día</option><option value="week">Semana</option><option value="month" selected>Mes</option><option value="year">Año</option>
+              </select>
+            </div>
+            <div class="field"><label for="reportDate">Fecha de referencia</label><input id="reportDate" name="date" type="date" required></div>
+            <button class="btn btn--sm" type="submit">Consultar</button>
+          </form>
+        </div>
+        <p class="report-range" id="reportRange" aria-live="polite"></p>
+        <div class="report-results" id="reportResults" aria-live="polite"></div>
+        <div class="sales-chart-wrap">
+          <h3 id="salesChartTitle">Ingresos por día</h3>
+          <div class="sales-chart" id="salesChart" role="img" aria-labelledby="salesChartTitle" aria-describedby="salesChartSummary"></div>
+          <p class="chart-summary" id="salesChartSummary" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section class="admin-panel" aria-labelledby="sales-title">
+        <div class="admin-panel__head">
+          <div><h2 id="sales-title">Ventas registradas</h2><p>Consulta los productos, cantidades, importes, fechas, estados y observaciones.</p></div>
+          <span class="hint" id="salesCount"></span>
+        </div>
+        <div class="table-scroll">
+          <table class="admin-table">
+            <thead><tr><th>Venta / fecha</th><th>Productos y cantidades</th><th>Importe</th><th>Estado</th><th>Observación</th></tr></thead>
+            <tbody id="salesRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="admin-columns">
+        <section class="admin-panel" aria-labelledby="stock-title">
+          <div class="admin-panel__head"><div><h2 id="stock-title">Reposición de inventario</h2>
+            <p>El stock de este panel es local y no actualiza el catálogo de la tienda.</p></div></div>
+          <form id="restockForm" class="admin-form">
+            <div class="field"><label for="restockProduct">Producto</label><select id="restockProduct" name="product" required></select></div>
+            <div class="field"><label for="stockAction">Movimiento</label><select id="stockAction" name="action"><option value="add">Aumentar stock</option><option value="remove">Reducir stock</option></select></div>
+            <div class="field"><label for="restockQuantity">Cantidad</label><input id="restockQuantity" name="quantity" type="number" min="1" step="1" inputmode="numeric" required aria-describedby="restockError" placeholder="Ej.: 12"></div>
+            <button class="btn" type="submit">Guardar movimiento</button>
+            <p class="admin-status" id="restockError" role="alert"></p>
+          </form>
+          <h3 class="admin-subtitle">Inventario de demostración</h3>
+          <div class="table-scroll"><table class="admin-table compact">
+            <thead><tr><th>Producto</th><th>Stock actual</th><th>Estado</th></tr></thead><tbody id="inventoryRows"></tbody>
+          </table></div>
+        </section>
+
+        <section class="admin-panel" aria-labelledby="restock-history-title">
+          <div class="admin-panel__head"><div><h2 id="restock-history-title">Historial de inventario</h2><p>Altas, aumentos y reducciones registrados en este navegador.</p></div></div>
+          <div class="table-scroll"><table class="admin-table compact">
+            <thead><tr><th>Fecha</th><th>Movimiento / producto</th><th>Cantidad</th><th>Stock resultante</th></tr></thead><tbody id="restockRows"></tbody>
+          </table></div>
+        </section>
+      </div>
+
+      <section class="admin-panel" aria-labelledby="new-product-title">
+        <div class="admin-panel__head"><div><h2 id="new-product-title">Agregar producto al inventario de prueba</h2><p>El alta solo modifica el inventario de demostración de este navegador.</p></div></div>
+        <form id="newProductForm" class="admin-form new-product-form">
+          <div class="field"><label for="newProductName">Nombre del producto</label><input id="newProductName" name="name" type="text" required maxlength="80" autocomplete="off" placeholder="Ej.: Agujas para bordado"></div>
+          <div class="field"><label for="newProductUnit">Unidad</label><select id="newProductUnit" name="unit"><option value="u">Unidad (u.)</option><option value="m">Metro (m)</option><option value="paq.">Paquete</option></select></div>
+          <div class="field"><label for="newProductStock">Stock inicial</label><input id="newProductStock" name="stock" type="number" min="0" step="1" inputmode="numeric" required value="0"></div>
+          <div class="field"><label for="newProductLowAt">Avisar stock bajo en</label><input id="newProductLowAt" name="lowAt" type="number" min="0" step="1" inputmode="numeric" required value="5"></div>
+          <button class="btn" type="submit">Agregar producto</button>
+          <p class="admin-status" id="newProductStatus" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="admin-panel" aria-labelledby="notifications-title">
+        <div class="admin-panel__head"><div><h2 id="notifications-title">Notificaciones de prueba</h2>
+          <p>No se envían correos: cada acción crea un registro local con estado explícito.</p></div></div>
+        <p class="sim-banner">SIMULACIÓN LOCAL — no se contacta al destinatario ni se usa ningún servicio externo.</p>
+        <form id="notificationForm" class="admin-form notification-form">
+          <div class="field"><label for="notificationTo">Correo de prueba del administrador</label><input id="notificationTo" name="to" type="email" required value="admin@merceriaexpress.test" autocomplete="email"></div>
+          <div class="field"><label for="notificationMessage">Contenido de la notificación</label><textarea id="notificationMessage" name="message" rows="3" required maxlength="500" placeholder="Escribe el aviso de prueba"></textarea></div>
+          <button class="btn btn--pink" type="submit">Registrar notificación simulada</button>
+          <p class="admin-status" id="notificationStatus" role="status" aria-live="polite"></p>
+        </form>
+        <div class="table-scroll"><table class="admin-table">
+          <thead><tr><th>Fecha</th><th>Destinatario</th><th>Contenido</th><th>Estado</th></tr></thead><tbody id="notificationRows"></tbody>
+        </table></div>
+      </section>
+    </div>
+  </section>
 </main>
 
 <footer class="site-footer" id="contacto">
@@ -257,7 +368,7 @@
             <div id="salesHistory" class="sales-history" aria-live="polite"></div>
             <button class="btn" id="accountContinue" type="button">Seguir comprando</button>
           </div>
-          <p class="auth-demo-note">Cuenta de demostración. Tus datos se guardan únicamente en este navegador.</p>
+          <p class="auth-demo-note">Administrador local de pruebas (sin conexión a la base de datos): admin@merceriaexpress.test · MerceriaDemo2026!</p>
         </div>
       </div>
     </section>
@@ -339,5 +450,6 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script type="module" src="js/main.js"></script>
+  <script type="module" src="js/admin.js"></script>
 </body>
 </html>
