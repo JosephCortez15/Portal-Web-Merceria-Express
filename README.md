@@ -58,17 +58,15 @@ Tarjeta de prueba: `4242 4242 4242 4242`, cualquier fecha futura y CVV de 3 díg
 
 ## Cuentas y registro de ventas
 
-Se puede crear una cuenta e iniciar sesión desde el botón **Iniciar sesión**. Es necesario iniciar sesión para agregar productos al carrito y completar el checkout; las compras quedan asociadas al usuario y el historial está disponible en **Mi cuenta**. Las cuentas, la sesión y las ventas se guardan en `localStorage` del navegador actual, así que no se comparten entre dispositivos ni navegadores y pueden borrarse al limpiar los datos del sitio. Las contraseñas se guardan como derivaciones PBKDF2, y no se conserva el número completo de tarjeta ni el CVV.
-
-Esta función es solo para la demostración front-end: no hay servidor, base de datos central ni autenticación real. Para producción se requiere un backend con almacenamiento seguro, gestión de sesiones y procesamiento de pagos integrado.
+Se puede crear una cuenta e iniciar sesión desde el botón **Iniciar sesión**. Es necesario iniciar sesión para agregar productos al carrito, completar el checkout y consultar los deseados; las compras quedan asociadas al usuario y su historial está disponible en **Mi cuenta**. Las cuentas, sesiones y pedidos regulares se gestionan mediante la API y la base de datos. El navegador conserva el token de sesión, no la contraseña. El pago es simulado y no se guarda el número completo de tarjeta ni el CVV.
 
 ## Lista de deseados
 
-Inicia sesión para marcar productos con el corazón y guardarlos en **Mis deseados**. Si aún no tienes sesión, la tienda abre el inicio de sesión y no modifica la lista. Los deseados se sincronizan con la cuenta y son independientes del carrito: marcar o quitar un favorito no agrega ni elimina productos de la compra.
+Inicia sesión para consultar **Mis deseados**, filtrar el catálogo por esa lista y marcar productos con el corazón. Sin sesión, al intentar abrir Deseados se solicita iniciar sesión y la lista no se muestra. Los deseados se sincronizan con la cuenta y son independientes del carrito: marcar o quitar un favorito no agrega ni elimina productos de la compra.
 
 ## Panel de administración de demostración
 
-El administrador de pruebas es independiente de la base de datos. Credenciales locales: `admin@merceriaexpress.test` / `MerceriaDemo2026!`. Su sesión usa una clave separada de `localStorage`, no genera ni requiere un token de API y puede cerrarse desde **Mi cuenta**. El botón **Administración** aparece únicamente con esa sesión de prueba y **Volver a tienda** regresa al catálogo. El registro normal no concede privilegios administrativos. Incluye indicadores, reportes por día/semana/mes/año con gráficos SVG de ingresos, ventas de muestra con observaciones editables, inventario de demostración con altas, aumentos, reducciones validadas e historial, y un registro local de notificaciones simuladas.
+El administrador de pruebas es independiente de la base de datos. Credenciales locales: `admin@merceriaexpress.test` / `MerceriaDemo2026!`. Su sesión usa una clave separada de `localStorage`, no genera ni requiere un token de API y puede cerrarse desde **Mi cuenta**. El botón **Administración** aparece únicamente con esa sesión de prueba y **Volver a tienda** regresa al catálogo. El registro normal no concede privilegios administrativos. La navegación del panel lleva directamente a Resumen, Reportes, Ventas, Inventario, Productos y Notificaciones. Los reportes por día, semana, mes o año muestran cinco gráficos SVG: ingresos por periodo (barras verticales), ventas por estado (dona), ingresos por producto (barras horizontales), cantidad de ventas (línea) y existencias frente a umbrales de alerta (área).
 
 Los datos están marcados como demostración y se guardan en `localStorage` de este navegador. El panel no depende de la API ni de la base de datos de la tienda; el inventario es independiente del catálogo del cliente. Las notificaciones nunca se envían: su estado indica explícitamente que son simulaciones locales.
 
