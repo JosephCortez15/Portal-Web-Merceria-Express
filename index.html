@@ -169,13 +169,22 @@
       <p class="sim-banner admin-sim" role="note">Este panel funciona sin base de datos. Las ventas, el stock y las notificaciones que ves aquí son datos locales de prueba; no representan operaciones reales ni se sincronizan con la tienda.</p>
       <p class="admin-status" id="adminStatus" role="status" aria-live="polite"></p>
 
-      <section class="admin-stats" aria-label="Indicadores">
+      <nav class="admin-nav" aria-label="Secciones de administración">
+        <a href="#admin-overview">Resumen</a>
+        <a href="#admin-reports">Reportes y gráficos</a>
+        <a href="#admin-sales">Ventas</a>
+        <a href="#admin-inventory">Inventario</a>
+        <a href="#admin-products">Productos</a>
+        <a href="#admin-notifications">Notificaciones</a>
+      </nav>
+
+      <section class="admin-stats" id="admin-overview" aria-label="Indicadores">
         <article class="admin-card"><span>Ventas de hoy</span><strong id="metricTodaySales">—</strong><small id="metricTodayIncome">—</small></article>
         <article class="admin-card"><span>Ventas este mes</span><strong id="metricMonthSales">—</strong><small id="metricMonthIncome">—</small></article>
         <article class="admin-card"><span>Productos de prueba</span><strong id="metricProducts">—</strong><small id="metricLowStock">—</small></article>
       </section>
 
-      <section class="admin-panel" aria-labelledby="report-title">
+      <section class="admin-panel" id="admin-reports" aria-labelledby="report-title">
         <div class="admin-panel__head">
           <div><h2 id="report-title">Reportes de ventas</h2><p>Elige un periodo y una fecha para consultar sus resultados.</p></div>
           <form class="admin-filters" id="reportForm">
@@ -195,9 +204,31 @@
           <div class="sales-chart" id="salesChart" role="img" aria-labelledby="salesChartTitle" aria-describedby="salesChartSummary"></div>
           <p class="chart-summary" id="salesChartSummary" role="status" aria-live="polite"></p>
         </div>
+        <div class="admin-chart-grid" aria-label="Visualizaciones complementarias">
+          <section class="sales-chart-wrap">
+            <h3 id="statusChartTitle">Ventas por estado</h3>
+            <div class="donut-chart" id="statusChart" role="img" aria-labelledby="statusChartTitle" aria-describedby="statusChartSummary"></div>
+            <p class="chart-summary" id="statusChartSummary" role="status" aria-live="polite"></p>
+          </section>
+          <section class="sales-chart-wrap">
+            <h3 id="productsChartTitle">Ingresos por producto</h3>
+            <div class="horizontal-chart" id="productsChart" role="img" aria-labelledby="productsChartTitle" aria-describedby="productsChartSummary"></div>
+            <p class="chart-summary" id="productsChartSummary" role="status" aria-live="polite"></p>
+          </section>
+          <section class="sales-chart-wrap">
+            <h3 id="ordersTrendChartTitle">Cantidad de ventas por periodo</h3>
+            <div class="sales-chart" id="ordersTrendChart" role="img" aria-labelledby="ordersTrendChartTitle" aria-describedby="ordersTrendChartSummary"></div>
+            <p class="chart-summary" id="ordersTrendChartSummary" role="status" aria-live="polite"></p>
+          </section>
+          <section class="sales-chart-wrap">
+            <h3 id="stockChartTitle">Existencias por producto</h3>
+            <div class="sales-chart" id="stockChart" role="img" aria-labelledby="stockChartTitle" aria-describedby="stockChartSummary"></div>
+            <p class="chart-summary" id="stockChartSummary" role="status" aria-live="polite"></p>
+          </section>
+        </div>
       </section>
 
-      <section class="admin-panel" aria-labelledby="sales-title">
+      <section class="admin-panel" id="admin-sales" aria-labelledby="sales-title">
         <div class="admin-panel__head">
           <div><h2 id="sales-title">Ventas registradas</h2><p>Consulta los productos, cantidades, importes, fechas, estados y observaciones.</p></div>
           <span class="hint" id="salesCount"></span>
@@ -210,7 +241,7 @@
         </div>
       </section>
 
-      <div class="admin-columns">
+      <div class="admin-columns" id="admin-inventory">
         <section class="admin-panel" aria-labelledby="stock-title">
           <div class="admin-panel__head"><div><h2 id="stock-title">Reposición de inventario</h2>
             <p>El stock de este panel es local y no actualiza el catálogo de la tienda.</p></div></div>
@@ -235,7 +266,7 @@
         </section>
       </div>
 
-      <section class="admin-panel" aria-labelledby="new-product-title">
+      <section class="admin-panel" id="admin-products" aria-labelledby="new-product-title">
         <div class="admin-panel__head"><div><h2 id="new-product-title">Agregar producto al inventario de prueba</h2><p>El alta solo modifica el inventario de demostración de este navegador.</p></div></div>
         <form id="newProductForm" class="admin-form new-product-form">
           <div class="field"><label for="newProductName">Nombre del producto</label><input id="newProductName" name="name" type="text" required maxlength="80" autocomplete="off" placeholder="Ej.: Agujas para bordado"></div>
@@ -247,7 +278,7 @@
         </form>
       </section>
 
-      <section class="admin-panel" aria-labelledby="notifications-title">
+      <section class="admin-panel" id="admin-notifications" aria-labelledby="notifications-title">
         <div class="admin-panel__head"><div><h2 id="notifications-title">Notificaciones de prueba</h2>
           <p>No se envían correos: cada acción crea un registro local con estado explícito.</p></div></div>
         <p class="sim-banner">SIMULACIÓN LOCAL — no se contacta al destinatario ni se usa ningún servicio externo.</p>
