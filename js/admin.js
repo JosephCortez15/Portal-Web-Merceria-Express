@@ -99,6 +99,7 @@ function renderMetrics() {
   $('#metricProducts').textContent = String(inventory.length);
   const low = inventory.filter(isLowStock).length;
   $('#metricLowStock').textContent = `${low} producto${low === 1 ? '' : 's'} con stock bajo`;
+  renderStockChart();
 }
 
 function renderSales() {
@@ -201,20 +202,21 @@ function getChartBuckets(period, start) {
   });
 }
 
+function getBucketIndex(period, date, rangeStart) {
+  if (period === 'day') return date.getHours();
+  if (period === 'year') return date.getMonth();
+  const saleDay = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  const firstDay = Date.UTC(rangeStart.getFullYear(), rangeStart.getMonth(), rangeStart.getDate());
+  return Math.floor((saleDay - firstDay) / 86400000);
+}
+
 function renderSalesChart(period, rangeStart, matches, rangeLabel) {
   const chart = $('#salesChart');
   const activeSales = matches.filter(sale => sale.status.toLocaleLowerCase() !== 'cancelada');
   const buckets = getChartBuckets(period, rangeStart);
   activeSales.forEach(sale => {
     const saleDate = new Date(sale.date);
-    let index;
-    if (period === 'day') index = saleDate.getHours();
-    else if (period === 'year') index = saleDate.getMonth();
-    else {
-      const saleDay = Date.UTC(saleDate.getFullYear(), saleDate.getMonth(), saleDate.getDate());
-      const firstDay = Date.UTC(rangeStart.getFullYear(), rangeStart.getMonth(), rangeStart.getDate());
-      index = Math.floor((saleDay - firstDay) / 86400000);
-    }
+    const index = getBucketIndex(period, saleDate, rangeStart);
     if (index >= 0 && index < buckets.length) {
       buckets[index].revenue += Number(sale.total);
       buckets[index].count += 1;
@@ -257,6 +259,141 @@ function renderSalesChart(period, rangeStart, matches, rangeLabel) {
     : '<p class="chart-empty">Sin ventas para mostrar en este periodo.</p>';
 }
 
+function renderStatusChart(matches, rangeLabel) {
+  const chart = $('#statusChart');
+  const grouped = new Map();
+  matches.forEach(sale => {
+    const label = String(sale.status || 'Sin estado');
+    const key = label.trim().toLocaleLowerCase();
+    const current = grouped.get(key) || { label, count: 0 };
+    current.count += 1;
+    grouped.set(key, current);
+  });
+  const statuses = [...grouped.values()];
+  const total = statuses.reduce((sum, item) => sum + item.count, 0);
+  const summary = total
+    ? `Distribución de ${total} ${total === 1 ? 'venta' : 'ventas'} por estado para ${rangeLabel}: ${statuses.map(item => `${item.label}, ${item.count}`).join('; ')}.`
+    : `No hay ventas registradas para mostrar por estado en ${rangeLabel}.`;
+  $('#statusChartSummary').textContent = summary;
+  chart.setAttribute('aria-label', summary);
+  if (!total) {
+    chart.innerHTML = '<p class="chart-empty">Sin ventas para mostrar en este periodo.</p>';
+    return;
+  }
+  const circumference = 2 * Math.PI * 48;
+  let offset = 0;
+  const segments = statuses.map((item, index) => {
+    const length = item.count / total * circumference;
+    const circle = `<circle class="donut-segment donut-segment--${index % 5}" cx="70" cy="70" r="48" stroke-dasharray="${length} ${circumference - length}" stroke-dashoffset="${-offset}" transform="rotate(-90 70 70)"><title>${escapeHTML(item.label)}: ${item.count}</title></circle>`;
+    offset += length;
+    return circle;
+  }).join('');
+  const legend = statuses.map((item, index) =>
+    `<li><i class="donut-segment--${index % 5}" aria-hidden="true"></i>${escapeHTML(item.label)}: <strong>${item.count}</strong></li>`
+  ).join('');
+  chart.innerHTML = `<div class="donut-layout"><svg viewBox="0 0 140 140" aria-hidden="true"><circle class="donut-track" cx="70" cy="70" r="48"/>${segments}<text class="donut-total" x="70" y="67">${total}</text><text class="donut-caption" x="70" y="84">ventas</text></svg><ul class="chart-legend">${legend}</ul></div>`;
+}
+
+function renderProductChart(matches, rangeLabel) {
+  const chart = $('#productsChart');
+  const totals = new Map();
+  matches.filter(sale => sale.status.toLocaleLowerCase() !== 'cancelada').forEach(sale => {
+    (sale.lines || []).forEach(line => {
+      const name = String(line.name || 'Producto sin nombre');
+      const amount = Number(line.amount);
+      if (Number.isFinite(amount) && amount > 0) totals.set(name, (totals.get(name) || 0) + amount);
+    });
+  });
+  const products = [...totals].map(([name, revenue]) => ({ name, revenue }))
+    .sort((a, b) => b.revenue - a.revenue).slice(0, 6);
+  const maxRevenue = Math.max(...products.map(item => item.revenue), 0);
+  const summary = products.length
+    ? `Ingresos por producto para ${rangeLabel}: ${products.map(item => `${item.name}, ${money(item.revenue)}`).join('; ')}. Se muestran hasta seis productos.`
+    : `No hay productos de ventas no canceladas para mostrar en ${rangeLabel}.`;
+  $('#productsChartSummary').textContent = summary;
+  chart.setAttribute('aria-label', summary);
+  chart.innerHTML = products.length ? products.map(item => {
+    const width = item.revenue / maxRevenue * 100;
+    return `<div class="horizontal-chart__row"><span class="horizontal-chart__name" title="${escapeHTML(item.name)}">${escapeHTML(item.name)}</span><span class="horizontal-chart__track"><span class="horizontal-chart__bar" style="width:${width}%"></span></span><strong class="horizontal-chart__value">${money(item.revenue)}</strong></div>`;
+  }).join('') : '<p class="chart-empty">Sin ventas para mostrar en este periodo.</p>';
+}
+
+function renderOrdersTrendChart(period, rangeStart, matches, rangeLabel) {
+  const chart = $('#ordersTrendChart');
+  const activeSales = matches.filter(sale => sale.status.toLocaleLowerCase() !== 'cancelada');
+  const buckets = getChartBuckets(period, rangeStart);
+  activeSales.forEach(sale => {
+    const index = getBucketIndex(period, new Date(sale.date), rangeStart);
+    if (index >= 0 && index < buckets.length) buckets[index].count += 1;
+  });
+  const maxCount = Math.max(...buckets.map(bucket => bucket.count), 0);
+  const summary = maxCount
+    ? `Cantidad de ventas no canceladas para ${rangeLabel}. Total: ${activeSales.length}. Cada punto representa ${period === 'day' ? 'una hora' : period === 'year' ? 'un mes' : 'un día'}.`
+    : `No hay ventas no canceladas para mostrar en ${rangeLabel}.`;
+  $('#ordersTrendChartSummary').textContent = summary;
+  chart.setAttribute('aria-label', summary);
+  if (!maxCount) {
+    chart.innerHTML = '<p class="chart-empty">Sin ventas para mostrar en este periodo.</p>';
+    return;
+  }
+  const plot = { left: 48, top: 16, width: 820, height: 150 };
+  const tickMax = Math.max(1, Math.ceil(maxCount / 4));
+  const y = value => plot.top + plot.height - value / (tickMax * 4) * plot.height;
+  const x = index => plot.left + (index + .5) * plot.width / buckets.length;
+  const grid = Array.from({ length: 5 }, (_, index) => {
+    const value = tickMax * (4 - index);
+    const lineY = plot.top + index * plot.height / 4;
+    return `<line x1="${plot.left}" y1="${lineY}" x2="${plot.left + plot.width}" y2="${lineY}" class="chart-grid"/><text x="${plot.left - 8}" y="${lineY + 4}" text-anchor="end" class="chart-axis">${value}</text>`;
+  }).join('');
+  const points = buckets.map((bucket, index) => `${x(index)},${y(bucket.count)}`).join(' ');
+  const labelStep = period === 'day' ? 3 : period === 'month' ? 3 : 1;
+  const labels = buckets.map((bucket, index) => {
+    if (index % labelStep !== 0 && index !== buckets.length - 1) return '';
+    return `<text x="${x(index)}" y="${plot.top + plot.height + 24}" text-anchor="middle" class="chart-axis">${escapeHTML(bucket.short)}</text>`;
+  }).join('');
+  const dots = buckets.map((bucket, index) => bucket.count
+    ? `<circle cx="${x(index)}" cy="${y(bucket.count)}" r="3.5" class="chart-point"><title>${escapeHTML(bucket.label)}: ${bucket.count} ${bucket.count === 1 ? 'venta' : 'ventas'}</title></circle>`
+    : '').join('');
+  chart.innerHTML = `<svg viewBox="0 0 900 212" role="presentation" focusable="false">${grid}<polyline points="${points}" class="chart-line"/>${dots}${labels}<text x="${plot.left + plot.width / 2}" y="208" text-anchor="middle" class="chart-axis">Periodo</text></svg>`;
+}
+
+function renderStockChart() {
+  const chart = $('#stockChart');
+  const products = [...inventory].sort((a, b) => Number(b.stock) - Number(a.stock)).slice(0, 8);
+  if (!products.length) {
+    const summary = 'No hay productos en el inventario local para graficar.';
+    chart.setAttribute('aria-label', summary);
+    chart.innerHTML = '<p class="chart-empty">No hay inventario para mostrar.</p>';
+    $('#stockChartSummary').textContent = summary;
+    return;
+  }
+  const max = Math.max(...products.flatMap(item => [Number(item.stock) || 0, Number(item.lowAt) || 0]), 1);
+  const tickMax = Math.ceil(max / 4) * 4 || 4;
+  const plot = { left: 55, top: 16, width: 810, height: 150 };
+  const x = index => products.length === 1
+    ? plot.left + plot.width / 2
+    : plot.left + index * plot.width / (products.length - 1);
+  const y = value => plot.top + plot.height - value / tickMax * plot.height;
+  const values = products.map(item => Number(item.stock) || 0);
+  const thresholds = products.map(item => Number(item.lowAt) || 0);
+  const valuePoints = values.map((value, index) => `${x(index)},${y(value)}`).join(' ');
+  const thresholdPoints = thresholds.map((value, index) => `${x(index)},${y(value)}`).join(' ');
+  const areaPoints = `${x(0)},${plot.top + plot.height} ${valuePoints} ${x(products.length - 1)},${plot.top + plot.height}`;
+  const grid = Array.from({ length: 5 }, (_, index) => {
+    const value = tickMax * (4 - index) / 4;
+    const lineY = plot.top + index * plot.height / 4;
+    return `<line x1="${plot.left}" y1="${lineY}" x2="${plot.left + plot.width}" y2="${lineY}" class="chart-grid"/><text x="${plot.left - 8}" y="${lineY + 4}" text-anchor="end" class="chart-axis">${Math.round(value)}</text>`;
+  }).join('');
+  const labels = products.map((item, index) => {
+    const label = String(item.name).length > 13 ? `${String(item.name).slice(0, 12)}…` : String(item.name);
+    return `<text x="${x(index)}" y="${plot.top + plot.height + 22}" text-anchor="middle" class="chart-axis"><title>${escapeHTML(item.name)}</title>${escapeHTML(label)}</text>`;
+  }).join('');
+  const summary = `Existencias locales de los ${products.length} productos con mayor stock. La línea discontinua indica el umbral de alerta de cada producto.`;
+  $('#stockChartSummary').textContent = summary;
+  chart.setAttribute('aria-label', `${summary} ${products.map(item => `${item.name}: ${item.stock}, alerta en ${item.lowAt}`).join('; ')}.`);
+  chart.innerHTML = `<svg viewBox="0 0 900 210" role="presentation" focusable="false">${grid}<polygon points="${areaPoints}" class="chart-area"/><polyline points="${valuePoints}" class="chart-line"/>${products.map((item, index) => `<circle cx="${x(index)}" cy="${y(values[index])}" r="3.5" class="chart-point"><title>${escapeHTML(item.name)}: ${values[index]} en existencia</title></circle>`).join('')}<polyline points="${thresholdPoints}" class="chart-threshold"/>${labels}<text x="${plot.left + plot.width / 2}" y="207" text-anchor="middle" class="chart-axis">Producto (línea discontinua: umbral de alerta)</text></svg>`;
+}
+
 function renderReport() {
   const period = $('#reportPeriod').value;
   const dateValue = $('#reportDate').value;
@@ -274,6 +411,10 @@ function renderReport() {
   $('#reportRange').textContent = `${labels[period]} consultado: ${rangeLabel}`;
   const revenue = activeSales.reduce((sum, sale) => sum + Number(sale.total), 0);
   renderSalesChart(period, start, matches, rangeLabel);
+  renderStatusChart(matches, rangeLabel);
+  renderProductChart(matches, rangeLabel);
+  renderOrdersTrendChart(period, start, matches, rangeLabel);
+  renderStockChart();
   $('#reportResults').innerHTML = `
     <article><span>Ventas no canceladas</span><strong>${activeSales.length}</strong></article>
     <article><span>Ingresos de demostración</span><strong>${money(revenue)}</strong></article>
