@@ -14,6 +14,7 @@ const guardar = () => store.set(STORAGE_KEY, [...ids]);
 
 export function setDeseadosOnChange(fn) { onChange = fn; }
 export function setWishlistActionGuard(fn) { beforeWishlistAction = fn; }
+export function requestWishlistAccess() { return beforeWishlistAction(); }
 
 export function initDeseados(validProductIds) {
   productIds = new Set(validProductIds);
@@ -45,7 +46,7 @@ export function hasDeseado(id) {
 }
 
 export function toggleDeseado(id) {
-  if (!beforeWishlistAction()) return null;
+  if (!requestWishlistAccess()) return null;
   id = Number(id);
   if (!productIds.has(id)) return false;
   const added = !ids.has(id);
