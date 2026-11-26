@@ -172,3 +172,20 @@ Proyecto Integrador Front-End — Tecnologías Web I (SIS-214), Universidad Cat�
 | RF-04 | Checkout simulado con validación HTML5 y recibo digital | `js/checkout.js` |
 | RF-05 | Registro/inicio de sesión e historial de ventas por cuenta | `js/auth.js`, `js/checkout.js` |
 | RF-06 | Lista de deseados persistente e independiente del carrito | `js/deseados.js`, `js/productos.js` |
+cat << 'EOF' > README.md
+# Portal Web Mercería Express
+
+Portal web de artículos de costura, hilos, telas y manualidades.
+Proyecto Integrador Front-End — Tecnologías Web I (SIS-214), Universidad Católica Boliviana "San Pablo".
+
+## Requerimientos cubiertos
+
+| RF | Descripción | Archivo |
+| --- | --- | --- |
+| RF-01 | Catálogo categorizado (Hilos, Botones, Cierres, Telas por Metro, Herramientas) | `js/productos.js` |
+| RF-02 | Calculadora de materiales (metros de tela e hilo) | `js/calculadora.js` |
+| RF-03 | Carrito persistente: stock, cupones, subtotal, IVA y envío | `js/carrito.js` |
+| RF-04 | Checkout simulado con validación HTML5 y recibo digital | `js/checkout.js` |
+| RF-05 | Registro/inicio de sesión e historial de ventas por cuenta | `js/auth.js`, `js/checkout.js` |
+| RF-06 | Lista de deseados persistente e independiente del carrito | `js/deseados.js`, `js/productos.js` |
+| Administración | Panel conectado a la base de datos (solo rol ADMIN) | `js/admin.js` |
