@@ -189,3 +189,13 @@ Proyecto Integrador Front-End — Tecnologías Web I (SIS-214), Universidad Cat�
 | RF-05 | Registro/inicio de sesión e historial de ventas por cuenta | `js/auth.js`, `js/checkout.js` |
 | RF-06 | Lista de deseados persistente e independiente del carrito | `js/deseados.js`, `js/productos.js` |
 | Administración | Panel conectado a la base de datos (solo rol ADMIN) | `js/admin.js` |
+cat << 'EOF' >> README.md
+
+## Diseño y accesibilidad
+
+* **Temas adaptables:** Soporte para modo claro y oscuro gestionado mediante variables CSS en `css/variables.css`.
+* **Diseño responsivo:** Interfaz optimizada para dispositivos móviles, tabletas y escritorio desde `css/components.css`.
+* **Validación y feedback:** Formularios con validación nativa HTML5 y alertas visuales claras para el usuario.
+EOF
+git add README.md
+git commit -m "docs: documentar soporte de tema claro/oscuro y diseño responsivo"
