@@ -41,10 +41,10 @@ $('#resetDemo').addEventListener('click', async () => {
 });
 
 /* Arranque: primero los datos del servidor, después los módulos que los usan */
+initAuth();   // una sola vez: los formularios de cuenta funcionan aunque falle la carga del catálogo
+
 async function iniciar() {
   $('#catalogo-grid').innerHTML = '<p class="empty" role="status">Cargando catálogo…</p>';
-  initAuth();
-  await restaurarSesion();
   try {
     const [cfg] = await Promise.all([getConfiguracion(), cargarCatalogo()]);
     Object.assign(CFG, cfg);
@@ -56,6 +56,7 @@ async function iniciar() {
   }
   initCarrito();
   initCatalog();              // también prepara la lista de deseados
+  await restaurarSesion();    // DESPUÉS del catálogo: así los deseados de la cuenta se filtran contra productos reales
   setStoreActionGuard(requireAuth);
   setWishlistActionGuard(requireWishlistAuth);
   setCheckoutGuard(requireCheckoutAuth);
