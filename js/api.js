@@ -57,3 +57,10 @@ export const getMisPedidos = () => pedir('/cuenta/pedidos');
 export const sincronizarDeseados = ids => pedir('/deseados/sincronizar', { method: 'POST', body: { ids } });
 export const agregarDeseado = id => pedir(`/deseados/${id}`, { method: 'PUT' });
 export const quitarDeseado = id => pedir(`/deseados/${id}`, { method: 'DELETE' });
+
+/* Panel de administración (solo cuentas con rol ADMIN) */
+export const getPanelAdmin = () => pedir('/admin/panel');
+export const guardarObservacion = (numero, note) => pedir(`/admin/ventas/${encodeURIComponent(numero)}/observacion`, { method: 'PATCH', body: { note } });
+export const moverStock = (productId, direction, quantity) => pedir('/admin/inventario/movimiento', { method: 'POST', body: { productId, direction, quantity } });
+export const crearProducto = datos => pedir('/admin/productos', { method: 'POST', body: datos });
+export const registrarNotificacion = (to, message) => pedir('/admin/notificaciones', { method: 'POST', body: { to, message } });
