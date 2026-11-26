@@ -209,3 +209,13 @@ El servidor en `backend/` gestiona la autenticación y la conexión con PostgreS
 DATABASE_URL=postgresql://usuario:password@host/neondb?sslmode=require
 JWT_SECRET=tu_clave_secreta_aqui
 PORT=3000
+cat << 'EOF' >> README.md
+
+## Información Académica
+
+* **Materia:** Tecnologías Web I (SIS-214)
+* **Institución:** Universidad Católica Boliviana "San Pablo"
+* **Estado:** Proyecto Integrador finalizado (2026)
+EOF
+git add README.md
+git commit -m "docs: agregar informacion academica y cierre de documentacion"
