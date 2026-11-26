@@ -100,3 +100,14 @@ git push -u origin main
 
 Luego, en GitHub: **Settings → Pages → Branch: main / (root) → Save**.
 El sitio quedará en `https://TU-USUARIO.github.io/merceria-express/`.
+cat << 'EOF' > README.md
+# Portal Web Mercería Express
+
+Portal web de artículos de costura, hilos, telas y manualidades.
+Proyecto Integrador Front-End — Tecnologías Web I (SIS-214), Universidad Católica Boliviana "San Pablo".
+
+## Requerimientos cubiertos
+
+| RF | Descripción | Archivo |
+| --- | --- | --- |
+| RF-01 | Catálogo categorizado (Hilos, Botones, Cierres, Telas por Metro, Herramientas) | `js/productos.js` |
