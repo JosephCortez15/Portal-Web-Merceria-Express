@@ -6,9 +6,6 @@ import { openCart, showView } from './carrito.js';
 import { getToken, setToken, registrar, iniciarSesion, cerrarSesion, getUsuarioActual, getMisPedidos } from './api.js';
 import { sincronizarConCuenta, limpiarDeseadosLocales } from './deseados.js';
 
-const LOCAL_ADMIN_EMAIL = 'admin@merceriaexpress.test';
-const LOCAL_ADMIN_PASSWORD = 'MerceriaDemo2026!';
-const LOCAL_ADMIN_SESSION_KEY = 'me.local-admin-session.v1';
 let checkoutPending = false;
 let currentUser = null;   // { id, nombre, email, telefono, rol } que devuelve la API
 
@@ -18,18 +15,7 @@ export function getCurrentUser() {
 
 /** Al cargar la página: si hay token guardado, pregunta al servidor quién es el usuario. */
 export async function restaurarSesion() {
-  if (localStorage.getItem(LOCAL_ADMIN_SESSION_KEY) === LOCAL_ADMIN_EMAIL) {
-    currentUser = {
-      id: 'local-admin-demo',
-      nombre: 'Administrador de demostración',
-      email: LOCAL_ADMIN_EMAIL,
-      telefono: null,
-      rol: 'ADMIN',
-      localDemo: true
-    };
-    updateAccountUI();
-    return;
-  }
+  localStorage.removeItem('me.local-admin-session.v1');   // limpia la sesión del antiguo admin de demostración
   if (!getToken()) return;
   try {
     currentUser = (await getUsuarioActual()).usuario;
@@ -53,8 +39,8 @@ const cantidad = q => (Number.isInteger(q) ? String(q) : q.toFixed(1));
 /** Pinta el historial de compras guardado en la base de datos. */
 export async function renderSales() {
   if (!currentUser) return;
-  if (currentUser.localDemo) {
-    $('#salesHistory').innerHTML = '<p class="placeholder-result">Cuenta administradora local de pruebas. No se consultan ventas de la base de datos.</p>';
+  if (currentUser.rol === 'ADMIN') {
+    $('#salesHistory').innerHTML = '<p class="placeholder-result">Cuenta de administrador: las ventas de la tienda están en el panel de Administración.</p>';
     return;
   }
   $('#salesHistory').innerHTML = '<p class="placeholder-result">Cargando tus compras…</p>';
@@ -152,7 +138,7 @@ async function despuesDeEntrar(form, mensaje) {
   updateAccountUI();
   form.reset();
   await sincronizarConCuenta().catch(() => {});
-  if (currentUser?.localDemo) {
+  if (currentUser?.rol === 'ADMIN') {
     checkoutPending = false;
     $('#cartModal').close();
     document.dispatchEvent(new CustomEvent('me:admin-login'));
@@ -168,7 +154,11 @@ async function despuesDeEntrar(form, mensaje) {
   toast(mensaje);
 }
 
+let authIniciado = false;
+
 export function initAuth() {
+  if (authIniciado) return;   // evita registrar dos veces los formularios (p. ej. al presionar "Reintentar")
+  authIniciado = true;
   $('#accountBtn').addEventListener('click', () => openCart('account'));
   $('#showRegister').addEventListener('click', () => {
     setAuthMode('register');
@@ -198,24 +188,7 @@ export function initAuth() {
     try {
       const email = String(data.get('email')).trim().toLowerCase();
       const password = String(data.get('password'));
-      if (email === LOCAL_ADMIN_EMAIL) {
-        if (password !== LOCAL_ADMIN_PASSWORD) {
-          throw new Error('Contraseña local incorrecta. Esta cuenta de prueba no usa la base de datos.');
-        }
-        localStorage.setItem(LOCAL_ADMIN_SESSION_KEY, LOCAL_ADMIN_EMAIL);
-        setToken(null);
-        currentUser = {
-          id: 'local-admin-demo',
-          nombre: 'Administrador de demostración',
-          email: LOCAL_ADMIN_EMAIL,
-          telefono: null,
-          rol: 'ADMIN',
-          localDemo: true
-        };
-        await despuesDeEntrar(form, 'Sesión local de administrador iniciada. No se usó la base de datos.');
-        return;
-      }
-      const r = await iniciarSesion(email, password);
+      const r = await iniciarSesion(email, password);   // el rol (CLIENTE o ADMIN) lo decide el servidor
       setToken(r.token);
       currentUser = r.usuario;
       await despuesDeEntrar(form, `Bienvenido, ${r.usuario.nombre}.`);
@@ -236,9 +209,6 @@ export function initAuth() {
     boton.disabled = true;
     try {
       const email = String(data.get('email')).trim().toLowerCase();
-      if (email === LOCAL_ADMIN_EMAIL) {
-        throw new Error('Este correo está reservado para la cuenta local de pruebas y no se registra en la base de datos.');
-      }
       const r = await registrar(String(data.get('name')).trim(), email, String(data.get('password')));
       setToken(r.token);
       currentUser = r.usuario;
@@ -251,8 +221,7 @@ export function initAuth() {
   });
 
   $('#logoutBtn').addEventListener('click', async () => {
-    if (currentUser?.localDemo) localStorage.removeItem(LOCAL_ADMIN_SESSION_KEY);
-    else await cerrarSesion().catch(() => {});   // invalida el token en el servidor
+    await cerrarSesion().catch(() => {});   // invalida el token en el servidor
     setToken(null);
     currentUser = null;
     limpiarDeseadosLocales();
