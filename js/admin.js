@@ -1,40 +1,19 @@
-/* admin.js — panel local de demostración, independiente de la API de la tienda */
-import { $, money } from './utils.js';
-import { getCurrentUser } from './auth.js';
-
-const KEYS = {
-  sales: 'me.admin.sales.v1',
-  stock: 'me.admin.stock.v1',
-  notifications: 'me.admin.notifications.v1'
-};
-const ADMIN_EMAIL = 'admin@merceriaexpress.test';
-
-const DEMO_PRODUCTS = [
-  { id: 'hilo-algodon', name: 'Hilo de algodón 100 g', stock: 34, unit: 'u', lowAt: 8 },
-  { id: 'tela-popelina', name: 'Tela popelina estampada', stock: 4, unit: 'm', lowAt: 6 },
-  { id: 'botones-madera', name: 'Botones de madera (12 u.)', stock: 21, unit: 'paq.', lowAt: 5 },
-  { id: 'cierre-metalico', name: 'Cierre metálico 20 cm', stock: 13, unit: 'u', lowAt: 5 },
-  { id: 'tijera-costura', name: 'Tijera de costura', stock: 3, unit: 'u', lowAt: 4 },
-  { id: 'cinta-metrica', name: 'Cinta métrica 150 cm', stock: 17, unit: 'u', lowAt: 5 }
-];
-
-const ago = days => new Date(Date.now() - days * 86400000).toISOString();
-const DEMO_SALES = [
-  { id: 'ME-DEMO-1058', date: ago(0), total: 128.5, status: 'Entregada', note: 'Entrega completada en tienda.', lines: [{ name: 'Hilo de algodón 100 g', quantity: 2, unit: 'u', amount: 37 }, { name: 'Tela popelina estampada', quantity: 1.5, unit: 'm', amount: 67.5 }] },
-  { id: 'ME-DEMO-1057', date: ago(1), total: 84, status: 'Preparando', note: '', lines: [{ name: 'Botones de madera (12 u.)', quantity: 2, unit: 'paq.', amount: 19 }, { name: 'Cierre metálico 20 cm', quantity: 5, unit: 'u', amount: 65 }] },
-  { id: 'ME-DEMO-1056', date: ago(3), total: 246.8, status: 'Pendiente', note: 'Confirmar horario de recojo.', lines: [{ name: 'Tijera de costura', quantity: 1, unit: 'u', amount: 92 }, { name: 'Tela popelina estampada', quantity: 2.8, unit: 'm', amount: 126 }, { name: 'Hilo de algodón 100 g', quantity: 1, unit: 'u', amount: 18.5 }] },
-  { id: 'ME-DEMO-1055', date: ago(10), total: 56.5, status: 'Entregada', note: '', lines: [{ name: 'Cinta métrica 150 cm', quantity: 1, unit: 'u', amount: 16 }, { name: 'Botones de madera (12 u.)', quantity: 3, unit: 'paq.', amount: 28.5 }] },
-  { id: 'ME-DEMO-1054', date: ago(20), total: 312, status: 'Entregada', note: 'Compra para taller de costura.', lines: [{ name: 'Tela popelina estampada', quantity: 6, unit: 'm', amount: 270 }, { name: 'Hilo de algodón 100 g', quantity: 2, unit: 'u', amount: 37 }] },
-  { id: 'ME-DEMO-1053', date: ago(45), total: 179.5, status: 'Cancelada', note: 'Cancelación de demostración.', lines: [{ name: 'Tijera de costura', quantity: 1, unit: 'u', amount: 92 }, { name: 'Cierre metálico 20 cm', quantity: 5, unit: 'u', amount: 65 }] },
-  { id: 'ME-DEMO-1052', date: ago(130), total: 98, status: 'Entregada', note: '', lines: [{ name: 'Hilo de algodón 100 g', quantity: 3, unit: 'u', amount: 55.5 }, { name: 'Cinta métrica 150 cm', quantity: 2, unit: 'u', amount: 32 }] },
-  { id: 'ME-DEMO-1051', date: ago(270), total: 425, status: 'Entregada', note: 'Pedido de temporada.', lines: [{ name: 'Tela popelina estampada', quantity: 8, unit: 'm', amount: 360 }, { name: 'Botones de madera (12 u.)', quantity: 4, unit: 'paq.', amount: 38 }] }
-];
+/* admin.js — panel de administración conectado a la base de datos (solo cuentas con rol ADMIN).
+ * Ventas, inventario, historial y notificaciones se leen y guardan con la API (/api/admin/...).
+ * El diseño, los gráficos y los reportes son los mismos del panel de demostración. */
+import { $, money, toast } from './utils.js';
+import { getCurrentUser, sesionVencida } from './auth.js';
+import { recargarProductos, renderCatalog } from './productos.js';
+import { getPanelAdmin, guardarObservacion, moverStock, crearProducto, registrarNotificacion } from './api.js';
 
 let sales = [];
 let inventory = [];
 let restocks = [];
 let notifications = [];
+let opciones = { unidades: [], categorias: [] };
 let authenticatedUser = null;
+let cargando = false;
+let ultimoReporte = null;   // datos del reporte en pantalla, para exportarlo a PDF
 
 function escapeHTML(value) {
   return String(value ?? '').replace(/[&<>"']/g, char => ({
@@ -53,16 +32,7 @@ function localDateInput(date) {
   return `${year}-${month}-${day}`;
 }
 
-function readCollection(key, demoData) {
-  const stored = localStorage.getItem(key);
-  if (stored === null) {
-    localStorage.setItem(key, JSON.stringify(demoData));
-    return demoData;
-  }
-  const parsed = JSON.parse(stored);
-  if (!Array.isArray(parsed)) throw new Error(`Los datos locales de ${key} no tienen un formato válido.`);
-  return parsed;
-}
+const cantidad = value => (Number.isInteger(Number(value)) ? String(Number(value)) : Number(value).toFixed(1));
 
 function setStatus(message, kind = '') {
   const status = $('#adminStatus');
@@ -71,9 +41,28 @@ function setStatus(message, kind = '') {
 }
 
 function hasAdminAccess(user = authenticatedUser) {
-  return user?.localDemo === true &&
-    user?.email?.trim().toLowerCase() === ADMIN_EMAIL &&
-    user?.rol === 'ADMIN';
+  return user?.rol === 'ADMIN';   // el rol lo asigna el servidor; no hay credenciales en el front
+}
+
+/** Muestra el error de la API; si la sesión venció, cierra el panel. */
+function manejarError(error, target) {
+  if (error.status === 401 || error.status === 403) {
+    sesionVencida();
+    showView(false);
+    toast(error.message);
+    return;
+  }
+  if (target) {
+    target.className = 'admin-status bad';
+    target.textContent = error.message;
+  } else {
+    setStatus(error.message, 'bad');
+  }
+}
+
+/** Los cambios de stock también se ven en el catálogo de la tienda. */
+function refrescarTienda() {
+  recargarProductos().then(renderCatalog).catch(() => {});
 }
 
 function isLowStock(product) {
@@ -93,9 +82,9 @@ function renderMetrics() {
   });
   const income = records => records.reduce((sum, sale) => sum + Number(sale.total), 0);
   $('#metricTodaySales').textContent = String(today.length);
-  $('#metricTodayIncome').textContent = `${money(income(today))} en ventas de muestra`;
+  $('#metricTodayIncome').textContent = `${money(income(today))} en ventas`;
   $('#metricMonthSales').textContent = String(thisMonth.length);
-  $('#metricMonthIncome').textContent = `${money(income(thisMonth))} en ventas de muestra`;
+  $('#metricMonthIncome').textContent = `${money(income(thisMonth))} en ventas`;
   $('#metricProducts').textContent = String(inventory.length);
   const low = inventory.filter(isLowStock).length;
   $('#metricLowStock').textContent = `${low} producto${low === 1 ? '' : 's'} con stock bajo`;
@@ -103,12 +92,12 @@ function renderMetrics() {
 }
 
 function renderSales() {
-  $('#salesCount').textContent = `${sales.length} ventas de demostración`;
+  $('#salesCount').textContent = `${sales.length} venta${sales.length === 1 ? '' : 's'} registrada${sales.length === 1 ? '' : 's'}`;
   const rows = [...sales].sort((a, b) => new Date(b.date) - new Date(a.date));
   $('#salesRows').innerHTML = rows.length ? rows.map(sale => `
     <tr>
-      <td><strong>${escapeHTML(sale.id)}</strong><span class="table-meta">${escapeHTML(localDate(sale.date))}</span></td>
-      <td>${sale.lines.map(line => `<span class="sale-line">${escapeHTML(line.name)} × ${escapeHTML(line.quantity)} ${escapeHTML(line.unit)} <span class="table-meta">${money(line.amount)}</span></span>`).join('')}</td>
+      <td><strong>${escapeHTML(sale.id)}</strong><span class="table-meta">${escapeHTML(localDate(sale.date))}</span><span class="table-meta">${escapeHTML(sale.cliente)}</span></td>
+      <td>${sale.lines.map(line => `<span class="sale-line">${escapeHTML(line.name)} × ${escapeHTML(cantidad(line.quantity))} ${escapeHTML(line.unit)} <span class="table-meta">${money(line.amount)}</span></span>`).join('')}</td>
       <td class="amount">${money(sale.total)}</td>
       <td><span class="status-pill">${escapeHTML(sale.status)}</span></td>
       <td><form class="note-form" data-sale-id="${escapeHTML(sale.id)}">
@@ -116,20 +105,20 @@ function renderSales() {
         <textarea id="note-${escapeHTML(sale.id)}" name="note" rows="2" maxlength="300" placeholder="Agregar observación">${escapeHTML(sale.note)}</textarea>
         <button class="btn btn--sm" type="submit">Guardar</button>
       </form></td>
-    </tr>`).join('') : '<tr><td colspan="5" class="empty-cell">No hay ventas en el registro local.</td></tr>';
+    </tr>`).join('') : '<tr><td colspan="5" class="empty-cell">Todavía no hay ventas registradas.</td></tr>';
 }
 
 function renderInventory() {
   const select = $('#restockProduct');
   const selected = select.value;
   select.innerHTML = inventory.map(product =>
-    `<option value="${escapeHTML(product.id)}">${escapeHTML(product.name)} (${escapeHTML(product.stock)} ${escapeHTML(product.unit)})</option>`
+    `<option value="${escapeHTML(product.id)}">${escapeHTML(product.name)} (${escapeHTML(cantidad(product.stock))} ${escapeHTML(product.unit)})</option>`
   ).join('');
-  if (inventory.some(product => product.id === selected)) select.value = selected;
+  if (inventory.some(product => String(product.id) === selected)) select.value = selected;
   $('#inventoryRows').innerHTML = inventory.length ? inventory.map(product => `
-    <tr><td>${escapeHTML(product.name)}</td><td>${escapeHTML(product.stock)} ${escapeHTML(product.unit)}</td>
+    <tr><td>${escapeHTML(product.name)}</td><td>${escapeHTML(cantidad(product.stock))} ${escapeHTML(product.unit)}</td>
       <td><span class="stock ${isLowStock(product) ? 'low' : 'ok'}">${isLowStock(product) ? 'Stock bajo' : 'Disponible'}</span></td></tr>`
-  ).join('') : '<tr><td colspan="3" class="empty-cell">No hay productos en el inventario de muestra.</td></tr>';
+  ).join('') : '<tr><td colspan="3" class="empty-cell">No hay productos en el inventario.</td></tr>';
   $('#metricProducts').textContent = String(inventory.length);
   const low = inventory.filter(isLowStock).length;
   $('#metricLowStock').textContent = `${low} producto${low === 1 ? '' : 's'} con stock bajo`;
@@ -139,8 +128,8 @@ function renderRestocks() {
   const rows = [...restocks].sort((a, b) => new Date(b.date) - new Date(a.date));
   $('#restockRows').innerHTML = rows.length ? rows.map(entry => `
     <tr><td>${escapeHTML(localDate(entry.date))}</td><td>${escapeHTML(entry.type || 'Reposición')} · ${escapeHTML(entry.productName)}</td>
-      <td class="${entry.direction === 'remove' ? 'movement-negative' : 'movement-positive'}">${entry.direction === 'remove' ? '−' : '+'}${escapeHTML(entry.quantity)} ${escapeHTML(entry.unit)}</td><td>${escapeHTML(entry.stockAfter)} ${escapeHTML(entry.unit)}</td></tr>`
-  ).join('') : '<tr><td colspan="4" class="empty-cell">Aún no se registraron reposiciones.</td></tr>';
+      <td class="${entry.direction === 'remove' ? 'movement-negative' : 'movement-positive'}">${entry.direction === 'remove' ? '−' : '+'}${escapeHTML(cantidad(entry.quantity))} ${escapeHTML(entry.unit)}</td><td>${escapeHTML(cantidad(entry.stockAfter))} ${escapeHTML(entry.unit)}</td></tr>`
+  ).join('') : '<tr><td colspan="4" class="empty-cell">Aún no hay movimientos de inventario.</td></tr>';
 }
 
 function renderNotifications() {
@@ -149,7 +138,18 @@ function renderNotifications() {
     <tr><td>${escapeHTML(localDate(item.date))}</td><td>${escapeHTML(item.to)}</td>
       <td class="notification-content">${escapeHTML(item.message)}</td>
       <td><span class="status-pill status-pill--local">${escapeHTML(item.status)}</span></td></tr>`
-  ).join('') : '<tr><td colspan="4" class="empty-cell">No hay notificaciones de prueba registradas.</td></tr>';
+  ).join('') : '<tr><td colspan="4" class="empty-cell">No hay notificaciones registradas.</td></tr>';
+}
+
+/** Llena los selects del formulario de alta con las unidades y categorías de la base. */
+function renderOpciones() {
+  const unidad = $('#newProductUnit'), categoria = $('#newProductCategory');
+  if (opciones.unidades.length && unidad) {
+    unidad.innerHTML = opciones.unidades.map(u => `<option value="${escapeHTML(u.id)}">${escapeHTML(u.nombre)}</option>`).join('');
+  }
+  if (opciones.categorias.length && categoria) {
+    categoria.innerHTML = opciones.categorias.map(c => `<option value="${escapeHTML(c.id)}">${escapeHTML(c.nombre)}</option>`).join('');
+  }
 }
 
 function getReportRange(period, dateValue) {
@@ -361,7 +361,7 @@ function renderStockChart() {
   const chart = $('#stockChart');
   const products = [...inventory].sort((a, b) => Number(b.stock) - Number(a.stock)).slice(0, 8);
   if (!products.length) {
-    const summary = 'No hay productos en el inventario local para graficar.';
+    const summary = 'No hay productos en el inventario para graficar.';
     chart.setAttribute('aria-label', summary);
     chart.innerHTML = '<p class="chart-empty">No hay inventario para mostrar.</p>';
     $('#stockChartSummary').textContent = summary;
@@ -388,7 +388,7 @@ function renderStockChart() {
     const label = String(item.name).length > 13 ? `${String(item.name).slice(0, 12)}…` : String(item.name);
     return `<text x="${x(index)}" y="${plot.top + plot.height + 22}" text-anchor="middle" class="chart-axis"><title>${escapeHTML(item.name)}</title>${escapeHTML(label)}</text>`;
   }).join('');
-  const summary = `Existencias locales de los ${products.length} productos con mayor stock. La línea discontinua indica el umbral de alerta de cada producto.`;
+  const summary = `Existencias de los ${products.length} productos con mayor stock. La línea discontinua indica el umbral de alerta de cada producto.`;
   $('#stockChartSummary').textContent = summary;
   chart.setAttribute('aria-label', `${summary} ${products.map(item => `${item.name}: ${item.stock}, alerta en ${item.lowAt}`).join('; ')}.`);
   chart.innerHTML = `<svg viewBox="0 0 900 210" role="presentation" focusable="false">${grid}<polygon points="${areaPoints}" class="chart-area"/><polyline points="${valuePoints}" class="chart-line"/>${products.map((item, index) => `<circle cx="${x(index)}" cy="${y(values[index])}" r="3.5" class="chart-point"><title>${escapeHTML(item.name)}: ${values[index]} en existencia</title></circle>`).join('')}<polyline points="${thresholdPoints}" class="chart-threshold"/>${labels}<text x="${plot.left + plot.width / 2}" y="207" text-anchor="middle" class="chart-axis">Producto (línea discontinua: umbral de alerta)</text></svg>`;
@@ -417,8 +417,128 @@ function renderReport() {
   renderStockChart();
   $('#reportResults').innerHTML = `
     <article><span>Ventas no canceladas</span><strong>${activeSales.length}</strong></article>
-    <article><span>Ingresos de demostración</span><strong>${money(revenue)}</strong></article>
-    <p>${activeSales.length ? `Ingresos basados en ${activeSales.length} venta${activeSales.length === 1 ? '' : 's'} no cancelada${activeSales.length === 1 ? '' : 's'} de demostración.` : 'No hay ventas no canceladas en este periodo. Los resultados son Bs 0,00.'} ${matches.length > activeSales.length ? 'Las ventas canceladas no se incluyen en el ingreso.' : ''}</p>`;
+    <article><span>Ingresos</span><strong>${money(revenue)}</strong></article>
+    <p>${activeSales.length ? `Ingresos basados en ${activeSales.length} venta${activeSales.length === 1 ? '' : 's'} no cancelada${activeSales.length === 1 ? '' : 's'}.` : 'No hay ventas no canceladas en este periodo. Los resultados son Bs 0,00.'} ${matches.length > activeSales.length ? 'Las ventas canceladas no se incluyen en el ingreso.' : ''}</p>`;
+  ultimoReporte = { period, periodLabel: labels[period], rangeLabel, matches, activeSales, revenue, chartTitle: $('#salesChartTitle').textContent };
+}
+
+/* ---------- Exportar el reporte a PDF ----------
+ * Arma un documento A4 con el resumen, el gráfico y el detalle de ventas del periodo
+ * y abre el diálogo de impresión del navegador, donde se elige "Guardar como PDF".
+ * No usa librerías externas ni cambia los estilos de la página. */
+function reporteHTML(r) {
+  const fila = s => `
+    <tr class="${s.status.toLocaleLowerCase() === 'cancelada' ? 'cancelada' : ''}">
+      <td>${escapeHTML(s.id)}</td><td>${escapeHTML(localDate(s.date))}</td><td>${escapeHTML(s.cliente)}</td>
+      <td>${s.lines.map(l => `${escapeHTML(l.name)} × ${escapeHTML(cantidad(l.quantity))} ${escapeHTML(l.unit)}`).join('<br>')}</td>
+      <td>${escapeHTML(s.status)}</td><td class="num">${money(s.total)}</td>
+    </tr>`;
+  const filas = [...r.matches].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const canceladas = r.matches.length - r.activeSales.length;
+  const promedio = r.activeSales.length ? r.revenue / r.activeSales.length : 0;
+  const grafico = $('#salesChart').querySelector('svg')?.outerHTML || '<p class="vacio">Sin ventas para graficar en este periodo.</p>';
+  const ahora = new Date().toLocaleString('es-BO', { dateStyle: 'long', timeStyle: 'short' });
+  /* Los otros 4 gráficos del panel (estado, productos, cantidad, existencias) se copian tal como se ven */
+  const extra = ['statusChart', 'productsChart', 'ordersTrendChart', 'stockChart'].map(id => {
+    const el = document.getElementById(id);
+    const titulo = document.getElementById(`${id}Title`)?.textContent || '';
+    return el ? `<section class="mini"><h3>${escapeHTML(titulo)}</h3>${el.innerHTML}</section>` : '';
+  }).join('');
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<title>Reporte de ventas - Mercería Express - ${escapeHTML(r.rangeLabel)}</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Nunito', 'Segoe UI', Arial, sans-serif; color: #2B2A3A; font-size: 10.5pt; }
+  header { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; border-bottom: 3px solid #3F6190; padding-bottom: 8px; margin-bottom: 14px; }
+  .marca { font-weight: 800; color: #3A8527; font-size: 11pt; letter-spacing: .02em; }
+  h1 { margin: 2px 0 0; font-size: 18pt; color: #3F6190; }
+  .meta { text-align: right; font-size: 9pt; color: #586079; line-height: 1.5; }
+  .resumen { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 0 0 14px; }
+  .resumen div { border: 1px solid #B5C8DB; border-radius: 8px; padding: 7px 9px; }
+  .resumen span { display: block; font-size: 8.5pt; color: #586079; }
+  .resumen strong { font-size: 13pt; }
+  h2 { font-size: 12pt; margin: 14px 0 6px; color: #2B2A3A; }
+  svg { width: 100%; height: auto; display: block; }
+  .chart-grid { stroke: #B5C8DB; stroke-width: 1; stroke-dasharray: 4 5; }
+  .chart-axis { fill: #586079; font-size: 12px; font-family: inherit; }
+  .chart-bar { fill: #3F6190; }
+  .graficos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; page-break-inside: avoid; }
+  .mini { border: 1px solid #D5DFEA; border-radius: 8px; padding: 6px 8px; page-break-inside: avoid; }
+  h3 { font-size: 10pt; margin: 0 0 4px; }
+  .chart-line { fill: none; stroke: #F08BB4; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .chart-area { fill: rgba(76,195,227,.35); }
+  .chart-point { fill: #F08BB4; stroke: #fff; stroke-width: 2; }
+  .chart-threshold { fill: none; stroke: #F29A3B; stroke-width: 2; stroke-dasharray: 5 4; }
+  .chart-empty { color: #586079; font-style: italic; font-size: 9pt; }
+  .donut-layout { display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .donut-layout svg { width: 120px; height: 120px; flex: none; }
+  .donut-track { fill: none; stroke: #B5C8DB; stroke-width: 18; }
+  .donut-segment { fill: none; stroke-width: 18; }
+  .donut-segment--0 { stroke: #6CC24A; } .donut-segment--1 { stroke: #4CC3E3; } .donut-segment--2 { stroke: #F29A3B; } .donut-segment--3 { stroke: #F08BB4; } .donut-segment--4 { stroke: #3F6190; }
+  .donut-total { fill: #2B2A3A; font-size: 21px; font-weight: 700; text-anchor: middle; }
+  .donut-caption { fill: #586079; font-size: 10px; text-anchor: middle; }
+  .chart-legend { list-style: none; margin: 0; padding: 0; font-size: 8.5pt; color: #586079; }
+  .chart-legend li { display: flex; align-items: center; gap: 5px; margin: 2px 0; }
+  .chart-legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .chart-legend .donut-segment--0 { background: #6CC24A; } .chart-legend .donut-segment--1 { background: #4CC3E3; } .chart-legend .donut-segment--2 { background: #F29A3B; } .chart-legend .donut-segment--3 { background: #F08BB4; } .chart-legend .donut-segment--4 { background: #3F6190; }
+  .horizontal-chart__row { display: grid; grid-template-columns: 1fr 1.6fr auto; align-items: center; gap: 6px; font-size: 8.5pt; margin: 4px 0; }
+  .horizontal-chart__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .horizontal-chart__track { height: 8px; border-radius: 99px; background: #D5DFEA; overflow: hidden; }
+  .horizontal-chart__bar { display: block; height: 100%; background: #3F6190; border-radius: 99px; }
+  .horizontal-chart__value { font-weight: 800; white-space: nowrap; }
+  table { width: 100%; border-collapse: collapse; font-size: 8.8pt; }
+  th { text-align: left; background: #EAF2F9; font-weight: 700; }
+  th, td { padding: 5px 6px; border-bottom: 1px solid #D5DFEA; vertical-align: top; }
+  .num { text-align: right; white-space: nowrap; }
+  tr { page-break-inside: avoid; }
+  tr.cancelada td { color: #8A90A2; }
+  tfoot td { font-weight: 800; border-top: 2px solid #3F6190; border-bottom: 0; }
+  .vacio { color: #586079; font-style: italic; }
+  footer { margin-top: 16px; font-size: 8.5pt; color: #586079; border-top: 1px solid #D5DFEA; padding-top: 6px; }
+</style></head><body>
+<header>
+  <div><div class="marca">MERCERÍA EXPRESS</div><h1>Reporte de ventas</h1></div>
+  <div class="meta">${escapeHTML(r.periodLabel)}: <strong>${escapeHTML(r.rangeLabel)}</strong><br>Generado: ${escapeHTML(ahora)}<br>Por: ${escapeHTML(authenticatedUser?.email || '')}</div>
+</header>
+<section class="resumen">
+  <div><span>Ventas no canceladas</span><strong>${r.activeSales.length}</strong></div>
+  <div><span>Ingresos</span><strong>${money(r.revenue)}</strong></div>
+  <div><span>Ticket promedio</span><strong>${money(promedio)}</strong></div>
+  <div><span>Canceladas</span><strong>${canceladas}</strong></div>
+</section>
+<h2>${escapeHTML(r.chartTitle)}</h2>
+${grafico}
+<div class="graficos">${extra}</div>
+<h2>Detalle de ventas</h2>
+${filas.length ? `<table>
+  <thead><tr><th>N.º de orden</th><th>Fecha</th><th>Cliente</th><th>Productos</th><th>Estado</th><th class="num">Total</th></tr></thead>
+  <tbody>${filas.map(fila).join('')}</tbody>
+  <tfoot><tr><td colspan="5">Ingresos del periodo (sin canceladas)</td><td class="num">${money(r.revenue)}</td></tr></tfoot>
+</table>` : '<p class="vacio">No hay ventas registradas en este periodo.</p>'}
+<footer>Mercería Express · Datos obtenidos de la base de datos de la tienda. Las ventas canceladas se muestran en gris y no suman en los ingresos.</footer>
+</body></html>`;
+}
+
+function exportarPDF() {
+  if (!hasAdminAccess()) return;
+  renderReport();
+  if (!ultimoReporte) { setStatus('Elige un periodo y una fecha antes de exportar.', 'bad'); return; }
+  const frame = document.createElement('iframe');
+  frame.setAttribute('aria-hidden', 'true');
+  frame.title = 'Reporte para imprimir';
+  frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  document.body.append(frame);
+  const doc = frame.contentDocument;
+  doc.open();
+  doc.write(reporteHTML(ultimoReporte));
+  doc.close();
+  setTimeout(() => {
+    frame.contentWindow.focus();
+    frame.contentWindow.print();          // en el diálogo: Destino → "Guardar como PDF"
+    setTimeout(() => frame.remove(), 1000);
+  }, 300);
+  setStatus('Se abrió la ventana de impresión: elige "Guardar como PDF" como destino.', 'ok');
 }
 
 function refreshDashboard() {
@@ -427,7 +547,29 @@ function refreshDashboard() {
   renderInventory();
   renderRestocks();
   renderNotifications();
+  renderOpciones();
   renderReport();
+}
+
+/** Trae todo desde la base de datos (GET /api/admin/panel). */
+async function cargarPanel() {
+  if (cargando) return;
+  cargando = true;
+  setStatus('Cargando datos de la tienda…');
+  try {
+    const data = await getPanelAdmin();
+    sales = data.sales;
+    inventory = data.inventory;
+    restocks = data.restocks;
+    notifications = data.notifications;
+    opciones = data.opciones || opciones;
+    refreshDashboard();
+    setStatus('');
+  } catch (error) {
+    manejarError(error);
+  } finally {
+    cargando = false;
+  }
 }
 
 function showView(adminVisible) {
@@ -441,7 +583,8 @@ function showView(adminVisible) {
   });
   document.body.classList.toggle('admin-mode', adminVisible);
   if (adminVisible) {
-    refreshDashboard();
+    $('#notificationTo').value = authenticatedUser?.email || '';
+    cargarPanel();
     $('#admin-title').focus({ preventScroll: true });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -471,21 +614,8 @@ document.querySelector('.brand').addEventListener('click', event => {
 
 function initAdmin() {
   authenticatedUser = getCurrentUser();
-  sales = readCollection(KEYS.sales, DEMO_SALES);
-  const storedStock = localStorage.getItem(KEYS.stock);
-  if (storedStock === null) {
-    inventory = DEMO_PRODUCTS;
-    restocks = [];
-    localStorage.setItem(KEYS.stock, JSON.stringify({ inventory, restocks }));
-  } else {
-    const parsedStock = JSON.parse(storedStock);
-    if (!parsedStock || !Array.isArray(parsedStock.inventory) || !Array.isArray(parsedStock.restocks)) {
-      throw new Error('El inventario local no tiene un formato válido.');
-    }
-    inventory = parsedStock.inventory;
-    restocks = parsedStock.restocks;
-  }
-  notifications = readCollection(KEYS.notifications, []);
+  ['me.admin.sales.v1', 'me.admin.stock.v1', 'me.admin.notifications.v1']
+    .forEach(key => localStorage.removeItem(key));   // datos del antiguo panel de demostración
   $('#adminToggle').hidden = !hasAdminAccess();
 
   $('#reportDate').value = localDateInput(new Date());
@@ -496,87 +626,72 @@ function initAdmin() {
   });
   $('#reportPeriod').addEventListener('change', renderReport);
   $('#reportDate').addEventListener('change', renderReport);
+  $('#exportPdf')?.addEventListener('click', exportarPDF);
 
-  $('#salesRows').addEventListener('submit', event => {
+  $('#salesRows').addEventListener('submit', async event => {
     const form = event.target.closest('.note-form');
     if (!form) return;
     event.preventDefault();
     if (!hasAdminAccess()) return;
-    const sale = sales.find(item => item.id === form.dataset.saleId);
-    if (!sale) {
-      setStatus('No se encontró esa venta en el registro local.', 'bad');
-      return;
-    }
-    const nextSales = sales.map(item => item.id === sale.id
-      ? { ...item, note: new FormData(form).get('note').toString().trim() }
-      : item);
+    const id = form.dataset.saleId;
+    const note = new FormData(form).get('note').toString().trim();
+    const boton = form.querySelector('[type=submit]');
+    boton.disabled = true;
     try {
-      localStorage.setItem(KEYS.sales, JSON.stringify(nextSales));
-      sales = nextSales;
-      renderSales();
-      setStatus(`Observación de ${sale.id} guardada localmente.`, 'ok');
+      await guardarObservacion(id, note);
+      sales = sales.map(item => item.id === id ? { ...item, note } : item);
+      setStatus(`Observación de ${id} guardada.`, 'ok');
     } catch (error) {
-      setStatus(`No se pudo guardar la observación: ${error.message}`, 'bad');
+      manejarError(error);
+    } finally {
+      boton.disabled = false;
     }
   });
 
-  $('#restockForm').addEventListener('submit', event => {
+  $('#restockForm').addEventListener('submit', async event => {
     event.preventDefault();
     if (!hasAdminAccess()) return;
+    const form = event.currentTarget;
     const error = $('#restockError');
+    error.className = 'admin-status';
     error.textContent = '';
     const quantityInput = $('#restockQuantity');
     const quantity = Number(quantityInput.value);
-    const product = inventory.find(item => item.id === $('#restockProduct').value);
+    const product = inventory.find(item => String(item.id) === $('#restockProduct').value);
     if (!product) {
       error.textContent = 'Selecciona un producto válido.';
       return;
     }
-    if (!Number.isSafeInteger(quantity) || quantity <= 0) {
-      error.textContent = 'Ingresa una cantidad entera mayor que cero.';
+    if (!(quantity > 0)) {
+      error.textContent = 'Ingresa una cantidad mayor que cero.';
       quantityInput.focus();
       return;
     }
     const direction = $('#stockAction').value;
     if (direction === 'remove' && quantity > Number(product.stock)) {
-      error.textContent = `No puedes reducir ${quantity}: el stock disponible es ${product.stock} ${product.unit}.`;
+      error.textContent = `No puedes reducir ${quantity}: el stock disponible es ${cantidad(product.stock)} ${product.unit}.`;
       quantityInput.focus();
       return;
     }
-    const stockAfter = Number(product.stock) + (direction === 'add' ? quantity : -quantity);
-    if (!Number.isSafeInteger(stockAfter)) {
-      error.textContent = 'La cantidad supera el límite permitido.';
-      quantityInput.focus();
-      return;
-    }
-    const nextInventory = inventory.map(item => item.id === product.id ? { ...item, stock: stockAfter } : item);
-    const entry = {
-      id: `REP-${Date.now()}`,
-      date: new Date().toISOString(),
-      type: direction === 'add' ? 'Aumento de stock' : 'Reducción de stock',
-      direction,
-      productId: product.id,
-      productName: product.name,
-      quantity,
-      unit: product.unit,
-      stockAfter
-    };
-    const nextRestocks = [...restocks, entry];
+    const boton = form.querySelector('[type=submit]');
+    boton.disabled = true;
     try {
-      localStorage.setItem(KEYS.stock, JSON.stringify({ inventory: nextInventory, restocks: nextRestocks }));
-      inventory = nextInventory;
-      restocks = nextRestocks;
-      event.currentTarget.reset();
+      const r = await moverStock(product.id, direction, quantity);
+      inventory = r.inventory;
+      restocks = r.restocks;
+      form.reset();
       refreshDashboard();
+      refrescarTienda();
       error.className = 'admin-status ok';
-      error.textContent = `${direction === 'add' ? 'Stock aumentado' : 'Stock reducido'}: ${product.name} ahora tiene ${stockAfter} ${product.unit}.`;
+      error.textContent = `${direction === 'add' ? 'Stock aumentado' : 'Stock reducido'}: ${r.name} ahora tiene ${cantidad(r.stockAfter)} ${r.unit}.`;
     } catch (saveError) {
-      error.className = 'admin-status bad';
-      error.textContent = `No se pudo guardar la reposición local: ${saveError.message}`;
+      manejarError(saveError, error);
+    } finally {
+      boton.disabled = false;
     }
   });
 
-  $('#newProductForm').addEventListener('submit', event => {
+  $('#newProductForm').addEventListener('submit', async event => {
     event.preventDefault();
     if (!hasAdminAccess()) return;
     const form = event.currentTarget;
@@ -584,61 +699,35 @@ function initAdmin() {
     status.className = 'admin-status';
     if (!form.reportValidity()) return;
     const data = new FormData(form);
-    const name = data.get('name').toString().trim();
-    const stock = Number(data.get('stock'));
-    const lowAt = Number(data.get('lowAt'));
-    if (!name) {
-      status.className = 'admin-status bad';
-      status.textContent = 'Escribe un nombre de producto válido.';
-      return;
-    }
-    if (!Number.isSafeInteger(stock) || stock < 0 || !Number.isSafeInteger(lowAt) || lowAt < 0) {
-      status.className = 'admin-status bad';
-      status.textContent = 'El stock y el umbral deben ser números enteros iguales o mayores que cero.';
-      return;
-    }
-    if (inventory.some(product => product.name.toLocaleLowerCase() === name.toLocaleLowerCase())) {
-      status.className = 'admin-status bad';
-      status.textContent = 'Ya existe un producto con ese nombre.';
-      return;
-    }
-    const unit = data.get('unit').toString();
-    const product = {
-      id: `demo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      name,
-      stock,
-      unit,
-      lowAt
+    const datos = {
+      name: data.get('name').toString().trim(),
+      unit: data.get('unit').toString(),
+      categoria: data.get('categoria')?.toString() || '',
+      precio: Number(data.get('precio')),
+      stock: Number(data.get('stock')),
+      lowAt: Number(data.get('lowAt'))
     };
-    const nextInventory = [...inventory, product];
-    const nextRestocks = [...restocks, {
-      id: `ALTA-${Date.now()}`,
-      date: new Date().toISOString(),
-      type: 'Alta de producto',
-      direction: 'add',
-      productId: product.id,
-      productName: product.name,
-      quantity: stock,
-      unit,
-      stockAfter: stock
-    }];
+    const boton = form.querySelector('[type=submit]');
+    boton.disabled = true;
     try {
-      localStorage.setItem(KEYS.stock, JSON.stringify({ inventory: nextInventory, restocks: nextRestocks }));
-      inventory = nextInventory;
-      restocks = nextRestocks;
+      const r = await crearProducto(datos);
+      inventory = r.inventory;
+      restocks = r.restocks;
       form.reset();
       $('#newProductStock').value = '0';
       $('#newProductLowAt').value = '5';
       refreshDashboard();
+      refrescarTienda();
       status.className = 'admin-status ok';
-      status.textContent = `${name} agregado al inventario local con stock inicial ${stock} ${unit}`;
+      status.textContent = `${r.name} agregado al catálogo con stock inicial ${datos.stock}.`;
     } catch (error) {
-      status.className = 'admin-status bad';
-      status.textContent = `No se pudo guardar el producto: ${error.message}`;
+      manejarError(error, status);
+    } finally {
+      boton.disabled = false;
     }
   });
 
-  $('#notificationForm').addEventListener('submit', event => {
+  $('#notificationForm').addEventListener('submit', async event => {
     event.preventDefault();
     if (!hasAdminAccess()) return;
     const form = event.currentTarget;
@@ -646,34 +735,27 @@ function initAdmin() {
     status.className = 'admin-status';
     if (!form.reportValidity()) return;
     const data = new FormData(form);
-    const entry = {
-      id: `NOTIF-${Date.now()}`,
-      date: new Date().toISOString(),
-      to: data.get('to').toString().trim(),
-      message: data.get('message').toString().trim(),
-      status: 'Simulación local: no enviado'
-    };
-    const nextNotifications = [...notifications, entry];
+    const boton = form.querySelector('[type=submit]');
+    boton.disabled = true;
     try {
-      localStorage.setItem(KEYS.notifications, JSON.stringify(nextNotifications));
-      notifications = nextNotifications;
+      const r = await registrarNotificacion(data.get('to').toString().trim(), data.get('message').toString().trim());
+      notifications = r.notifications;
       form.reset();
-      $('#notificationTo').value = 'admin@merceriaexpress.test';
+      $('#notificationTo').value = authenticatedUser?.email || '';
       renderNotifications();
       status.className = 'admin-status ok';
-      status.textContent = 'Notificación de prueba registrada localmente. No se envió ningún correo.';
+      status.textContent = 'Notificación registrada como simulada. No se envió ningún correo.';
     } catch (error) {
-      status.className = 'admin-status bad';
-      status.textContent = `No se pudo guardar la notificación local: ${error.message}`;
+      manejarError(error, status);
+    } finally {
+      boton.disabled = false;
     }
   });
-
-  refreshDashboard();
 }
 
 try {
   initAdmin();
 } catch (error) {
-  console.error('No se pudo iniciar el panel local de administración.', error);
+  console.error('No se pudo iniciar el panel de administración.', error);
   setStatus(`No se pudo cargar el panel: ${error.message}`, 'bad');
 }
