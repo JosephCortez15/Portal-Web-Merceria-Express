@@ -6,6 +6,7 @@
 -- =====================================================================
 DROP VIEW  IF EXISTS v_ventas_por_producto, v_pedidos_resumen CASCADE;
 DROP TABLE IF EXISTS
+  notificaciones,
   historial_estados_pedido, cupones_uso, lista_deseados, transacciones_pago,
   kardex_inventario, pedidos_detalle, pedidos_cabecera, reglas_calculo_materiales,
   variaciones_producto, productos, unidades_medida, categorias, cupones_descuento,
