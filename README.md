@@ -199,3 +199,13 @@ cat << 'EOF' >> README.md
 EOF
 git add README.md
 git commit -m "docs: documentar soporte de tema claro/oscuro y diseño responsivo"
+cat << 'EOF' >> README.md
+
+## Configuración del Backend
+
+El servidor en `backend/` gestiona la autenticación y la conexión con PostgreSQL (Neon). Para ejecutarlo localmente, crea un archivo `.env` dentro de `backend/` con las siguientes variables:
+
+```env
+DATABASE_URL=postgresql://usuario:password@host/neondb?sslmode=require
+JWT_SECRET=tu_clave_secreta_aqui
+PORT=3000
