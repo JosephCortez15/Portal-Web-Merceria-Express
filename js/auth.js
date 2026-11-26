@@ -132,6 +132,13 @@ export function requireAuth() {
   return false;
 }
 
+export function requireWishlistAuth() {
+  if (getCurrentUser()) return true;
+  openCart('account');
+  toast('Inicia sesión o crea una cuenta para consultar y guardar tus deseados.');
+  return false;
+}
+
 export function requireCheckoutAuth() {
   if (getCurrentUser()) return true;
   checkoutPending = true;

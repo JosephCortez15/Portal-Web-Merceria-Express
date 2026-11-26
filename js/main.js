@@ -4,14 +4,14 @@ import { art, initCatalog, renderCatalog, cargarCatalogo, recargarProductos } fr
 import { state, initCarrito, refresh, setOnChange, setStoreActionGuard, setCheckoutGuard, save, CFG } from './carrito.js';
 import { initCalculadora, renderCalcSelects } from './calculadora.js';
 import { initCheckout } from './checkout.js';
-import { initAuth, requireAuth, requireCheckoutAuth, restaurarSesion } from './auth.js';
+import { initAuth, requireAuth, requireWishlistAuth, requireCheckoutAuth, restaurarSesion } from './auth.js';
 import { setDeseadosOnChange, setWishlistActionGuard } from './deseados.js';
 import { getConfiguracion } from './api.js';
 
 /* Cuando cambia el carrito o los deseados se refresca el catálogo y la calculadora */
 setOnChange(() => { renderCatalog(); renderCalcSelects(); });
 setDeseadosOnChange(() => renderCatalog());
-setWishlistActionGuard(requireAuth);
+setWishlistActionGuard(requireWishlistAuth);
 
 /* Ilustración decorativa del hero (no depende de la API) */
 (function hero() {
@@ -57,7 +57,7 @@ async function iniciar() {
   initCarrito();
   initCatalog();              // también prepara la lista de deseados
   setStoreActionGuard(requireAuth);
-  setWishlistActionGuard(requireAuth);
+  setWishlistActionGuard(requireWishlistAuth);
   setCheckoutGuard(requireCheckoutAuth);
   initCalculadora();
   initCheckout();
