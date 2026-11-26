@@ -111,3 +111,34 @@ Proyecto Integrador Front-End — Tecnologías Web I (SIS-214), Universidad Cat�
 | RF | Descripción | Archivo |
 | --- | --- | --- |
 | RF-01 | Catálogo categorizado (Hilos, Botones, Cierres, Telas por Metro, Herramientas) | `js/productos.js` |
+cat << 'EOF' > README.md
+# Portal Web Mercería Express
+
+Portal web de artículos de costura, hilos, telas y manualidades.
+Proyecto Integrador Front-End — Tecnologías Web I (SIS-214), Universidad Católica Boliviana "San Pablo".
+
+## Requerimientos cubiertos
+
+| RF | Descripción | Archivo |
+| --- | --- | --- |
+| RF-01 | Catálogo categorizado (Hilos, Botones, Cierres, Telas por Metro, Herramientas) | `js/productos.js` |
+| RF-02 | Calculadora de materiales (metros de tela e hilo) | `js/calculadora.js` |
+| RF-03 | Carrito persistente: stock, cupones, subtotal, IVA y envío | `js/carrito.js` |
+
+## Estructura
+## Cómo ejecutarlo en VS Code
+
+El JavaScript usa módulos ES6 (`type="module"`), que **no funcionan abriendo el archivo con doble clic** (`file://`).
+Usa un servidor local:
+
+1. Instala la extensión **Live Server** en VS Code.
+2. Clic derecho en `index.html` → **Open with Live Server**.
+
+(Alternativa: `npx serve` o `python3 -m http.server` dentro de la carpeta.)
+
+## Cupones de prueba
+
+`COSTURA10` (10 %), `LANA15` (15 %), `BIENVENIDA5` (5 %).
+EOF
+git add README.md
+git commit -m "docs: agregar calculadora de materiales y carrito persistente (RF-02, RF-03)"
