@@ -35,7 +35,7 @@ export const sesionOpcional = (req, _res, next) => {
 /** Forma pública del usuario (nunca incluye el hash de la contraseña). */
 export const usuarioPublico = u => ({
   id: u.id_usuario,
-  nombre: [u.nombres, u.apellidos].filter(Boolean).join(' '),
+  nombre: [u.nombres, u.apellidos].filter(Boolean).join(' ') || (u.rol === 'ADMIN' ? 'Administrador' : u.email),
   email: u.email,
   telefono: u.telefono || null,
   rol: u.rol
