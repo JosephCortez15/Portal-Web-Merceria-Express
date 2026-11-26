@@ -1,7 +1,7 @@
 /* productos.js — RF-01: datos, ilustraciones, filtro por categoría y búsqueda */
 import { $, money, shade, toast } from './utils.js';
 import { remaining, available, addToCart } from './carrito.js';
-import { initDeseados, hasDeseado, toggleDeseado, deseadosCount } from './deseados.js';
+import { initDeseados, hasDeseado, toggleDeseado, deseadosCount, requestWishlistAccess } from './deseados.js';
 import { getCategorias, getProductos } from './api.js';
 
 /* Se llenan desde el backend con cargarCatalogo(); 'todo' es solo un filtro del front */
@@ -139,10 +139,15 @@ export function initCatalog() {
   });
   $('#q').addEventListener('input', e => { busqueda = e.target.value; renderCatalog(); });
   $('#wishlistFilter').addEventListener('click', () => {
+    if (!requestWishlistAccess()) return;
     mostrandoDeseados = !mostrandoDeseados;
     renderCatalog();
   });
-  $('#wishlistBtn').addEventListener('click', () => {
+  $('#wishlistBtn').addEventListener('click', event => {
+    if (!requestWishlistAccess()) {
+      event.preventDefault();
+      return;
+    }
     mostrandoDeseados = true;
     renderCatalog();
   });
