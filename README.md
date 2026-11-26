@@ -13,7 +13,7 @@ Proyecto Integrador Front-End — Tecnologías Web I (SIS-214), Universidad Cat�
 | RF-04 | Checkout simulado con validación HTML5 y recibo digital | `js/checkout.js` |
 | RF-05 | Registro/inicio de sesión e historial de ventas por cuenta | `js/auth.js`, `js/checkout.js` |
 | RF-06 | Lista de deseados persistente e independiente del carrito | `js/deseados.js`, `js/productos.js` |
-| Administración | Dashboard local de demostración | `js/admin.js` |
+| Administración | Panel conectado a la base de datos (solo rol ADMIN) | `js/admin.js` |
 
 ## Estructura
 
@@ -35,7 +35,7 @@ merceria-express/
 │   ├── checkout.js     # RF-04
 │   ├── auth.js         # RF-05
 │   ├── deseados.js     # RF-06
-│   └── admin.js        # Panel de administración local
+│   └── admin.js        # Panel de administración (API /api/admin)
 └── assets/
     ├── images/         # fotografía de marca y recorte cuadrado del logo
     └── icons/
@@ -58,17 +58,34 @@ Tarjeta de prueba: `4242 4242 4242 4242`, cualquier fecha futura y CVV de 3 díg
 
 ## Cuentas y registro de ventas
 
-Se puede crear una cuenta e iniciar sesión desde el botón **Iniciar sesión**. Es necesario iniciar sesión para agregar productos al carrito, completar el checkout y consultar los deseados; las compras quedan asociadas al usuario y su historial está disponible en **Mi cuenta**. Las cuentas, sesiones y pedidos regulares se gestionan mediante la API y la base de datos. El navegador conserva el token de sesión, no la contraseña. El pago es simulado y no se guarda el número completo de tarjeta ni el CVV.
+Se puede crear una cuenta e iniciar sesión desde el botón **Iniciar sesión**. Es necesario iniciar sesión para agregar productos al carrito, completar el checkout y consultar los deseados. Las compras quedan asociadas al usuario y el historial está disponible en **Mi cuenta**.
+
+Las cuentas, las ventas, los deseados y el stock se guardan en la base de datos PostgreSQL (Neon) a través del backend (`backend/`), así que están disponibles en cualquier dispositivo. Las contraseñas se guardan en el servidor como hash scrypt, y el navegador solo conserva el token de sesión. El pago es simulado: solo se guardan los últimos 4 dígitos de la tarjeta, nunca el número completo ni el CVV.
 
 ## Lista de deseados
 
 Inicia sesión para consultar **Mis deseados**, filtrar el catálogo por esa lista y marcar productos con el corazón. Sin sesión, al intentar abrir Deseados se solicita iniciar sesión y la lista no se muestra. Los deseados se sincronizan con la cuenta y son independientes del carrito: marcar o quitar un favorito no agrega ni elimina productos de la compra.
 
-## Panel de administración de demostración
+## Panel de administración
 
-El administrador de pruebas es independiente de la base de datos. Credenciales locales: `admin@merceriaexpress.test` / `MerceriaDemo2026!`. Su sesión usa una clave separada de `localStorage`, no genera ni requiere un token de API y puede cerrarse desde **Mi cuenta**. El botón **Administración** aparece únicamente con esa sesión de prueba y **Volver a tienda** regresa al catálogo. El registro normal no concede privilegios administrativos. La navegación del panel lleva directamente a Resumen, Reportes, Ventas, Inventario, Productos y Notificaciones. Los reportes por día, semana, mes o año muestran cinco gráficos SVG: ingresos por periodo (barras verticales), ventas por estado (dona), ingresos por producto (barras horizontales), cantidad de ventas (línea) y existencias frente a umbrales de alerta (área).
+El panel está conectado a la base de datos de la tienda (rutas `/api/admin/...` del backend) y solo lo ven las cuentas con rol **ADMIN**. El rol lo asigna el servidor: el registro normal crea clientes y en el front no hay credenciales escritas. La navegación del panel lleva directamente a Resumen, Reportes, Ventas, Inventario, Productos y Notificaciones. Los reportes por día, semana, mes o año muestran cinco gráficos SVG: ingresos por periodo (barras verticales), ventas por estado (dona), ingresos por producto (barras horizontales), cantidad de ventas (línea) y existencias frente a umbrales de alerta (área).
 
-Los datos están marcados como demostración y se guardan en `localStorage` de este navegador. El panel no depende de la API ni de la base de datos de la tienda; el inventario es independiente del catálogo del cliente. Las notificaciones nunca se envían: su estado indica explícitamente que son simulaciones locales.
+Para crear un administrador, desde la carpeta `backend` (con el `.env` apuntando a la base):
+
+```bash
+npm run crear-admin -- correo@dominio.com "UnaClaveSegura"
+```
+
+La contraseña se guarda cifrada (scrypt). Al iniciar sesión con esa cuenta aparece el botón **Administración**, y **Volver a tienda** regresa al catálogo.
+
+Incluye:
+
+- Indicadores de ventas del día y del mes.
+- Reportes por día, semana, mes o año con gráfico de ingresos, exportables a **PDF** con el botón **Exportar PDF** (en el diálogo de impresión, elige "Guardar como PDF").
+- Ventas reales con observaciones internas.
+- Inventario real con aumentos y reducciones registrados en el kardex.
+- Alta de productos, que aparecen en el catálogo.
+- Registro de notificaciones simuladas: se guardan en la base, pero no se envía ningún correo.
 
 ## Subir a GitHub y publicar
 
