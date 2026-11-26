@@ -9,6 +9,7 @@ import cupones from './routes/cupones.js';
 import pedidos from './routes/pedidos.js';
 import auth from './routes/auth.js';
 import cuenta from './routes/cuenta.js';
+import admin from './routes/admin.js';
 
 const app = express();
 const origenes = (process.env.CORS_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
@@ -27,6 +28,7 @@ app.use('/api', cupones);
 app.use('/api', pedidos);
 app.use('/api', auth);
 app.use('/api', cuenta);
+app.use('/api', admin);
 
 app.use('/api', (_req, res) => res.status(404).json({ error: 'NO_ENCONTRADO', mensaje: 'Ruta no encontrada.' }));
 
